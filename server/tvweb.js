@@ -2091,6 +2091,10 @@ function setupHomeAssistant() {
       if (glasshouseHome) glasshouseHome.setHomeInfo(val);
       return;
     }
+    if (action === 'homeBoard') {
+      if (glasshouseHome) glasshouseHome.setHomeBoard(val);
+      return;
+    }
 
     if (action === 'toast') {
       doControl('toast', val, function() {});
