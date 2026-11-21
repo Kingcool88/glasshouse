@@ -3642,6 +3642,32 @@ step('the info lines Home Assistant pushes are capped, kept across a restart and
   });
 });
 
+step('the board Home Assistant pushes has a title and up to twenty lines, and goes once its minutes are up', function (done) {
+  var clock = Date.now();
+  start(null, { now: function () { return clock; } });
+  home.setHomeBoard('not json');
+  assert.strictEqual(home.beat().board, null, 'nothing shown from a push that is not JSON');
+  var lines = [];
+  for (var i = 0; i < 25; i++) lines.push({ label: 'Team ' + i + ' 1-0 Team ' + (i + 1), value: "67'" });
+  home.setHomeBoard(JSON.stringify({ title: 'Football today', minutes: 10, lines: lines }));
+  var b = home.beat().board;
+  assert.strictEqual(b.title, 'Football today');
+  assert.strictEqual(b.lines.length, 20, 'twenty at most');
+  assert.deepEqual(b.lines[0], { icon: '', label: 'Team 0 1-0 Team 1', value: "67'" });
+  home.setHomeBoard(JSON.stringify({ title: 'Football today', lines: [{ label: 'No matches today' }] }));
+  assert.strictEqual(home.beat().board.lines.length, 1, 'a later push replaces it');
+  home.setHomeBoard(JSON.stringify({ title: 'Football today', minutes: 10, lines: [] }));
+  assert.deepEqual(home.beat().board, { title: 'Football today', lines: [] }, 'a title alone is shown');
+  clock += 10 * 60000 + 1000;
+  assert.strictEqual(home.beat().board, null, 'gone once its minutes are up');
+  home.setHomeBoard(JSON.stringify({ title: 'x', lines: [] }));
+  home.setHomeBoard('');
+  home.info(function (r) {
+    assert.strictEqual(r.board, null, 'an empty push takes it away');
+    done();
+  });
+});
+
 step('a Weather switch saved off before the source choice stays off', function (done) {
   start({ enabled: false, showWeather: false });
   assert.strictEqual(home.layout().weather, 'off');

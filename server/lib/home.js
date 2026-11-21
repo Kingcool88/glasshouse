@@ -1966,21 +1966,28 @@ function homeInfoIcon(v) {
   return v.replace(/^mdi:/, '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
 }
 
-function setHomeInfo(raw) {
-  var text = String(raw == null ? '' : raw).trim();
-  var parsed = null;
-  if (text) {
-    try { parsed = JSON.parse(text); } catch (e) { return; }
-    if (parsed && !isArray(parsed) && isArray(parsed.items)) parsed = parsed.items;
-    if (!isArray(parsed)) return;
-  }
+// A pushed list of lines, at most max of them, or null where it is not one.
+function homeInfoLines(list, max, labelMax) {
+  if (!isArray(list)) return null;
   var lines = [];
-  (parsed || []).forEach(function (item) {
-    if (lines.length >= HOME_INFO_MAX || !item || typeof item !== 'object') return;
-    var line = { icon: homeInfoIcon(item.icon), label: homeInfoText(item.label, HOME_INFO_LABEL_MAX),
+  list.forEach(function (item) {
+    if (lines.length >= max || !item || typeof item !== 'object') return;
+    var line = { icon: homeInfoIcon(item.icon), label: homeInfoText(item.label, labelMax),
                  value: homeInfoText(item.value, HOME_INFO_VALUE_MAX) };
     if (line.label || line.value) lines.push(line);
   });
+  return lines;
+}
+
+function setHomeInfo(raw) {
+  var text = String(raw == null ? '' : raw).trim();
+  var lines = [];
+  if (text) {
+    var parsed = null;
+    try { parsed = JSON.parse(text); } catch (e) { return; }
+    lines = homeInfoLines(parsed && !isArray(parsed) ? parsed.items : parsed, HOME_INFO_MAX, HOME_INFO_LABEL_MAX);
+    if (!lines) return;
+  }
   homeInfo = lines;
   try {
     if (lines.length) writeJsonAtomic(homeInfoFile(), lines, 384);
@@ -1996,8 +2003,39 @@ function loadHomeInfo() {
   homeInfo = isArray(lines) ? lines.slice(0, HOME_INFO_MAX) : [];
 }
 
+/*
+ * A board beside them: a title and a longer list the view shows a few lines
+ * at a time, as the day's matches. text.lg_tv_home_board's command topic:
+ *   {"title":"Football today","minutes":10,"lines":[{"label":"Arsenal 2-1 Chelsea","value":"67'"}]}
+ * Live results go stale, so it is not kept across a restart, and with
+ * minutes it is taken away that long after the last push, as when Home
+ * Assistant stops sending. An empty push takes it away at once.
+ */
+var HOME_BOARD_MAX = 20;
+var HOME_BOARD_LABEL_MAX = 48;
+var HOME_BOARD_TITLE_MAX = 40;
+var homeBoard = null;
+
+function setHomeBoard(raw) {
+  var text = String(raw == null ? '' : raw).trim();
+  if (!text) { homeBoard = null; return; }
+  var parsed = null;
+  try { parsed = JSON.parse(text); } catch (e) { return; }
+  var lines = homeInfoLines(parsed && !isArray(parsed) ? parsed.lines : parsed, HOME_BOARD_MAX, HOME_BOARD_LABEL_MAX);
+  if (!lines) return;
+  var title = parsed && !isArray(parsed) ? homeInfoText(parsed.title, HOME_BOARD_TITLE_MAX) : '';
+  var minutes = parsed && !isArray(parsed) && typeof parsed.minutes === 'number' && parsed.minutes > 0 ? parsed.minutes : 0;
+  homeBoard = title || lines.length ? { title: title, lines: lines, until: minutes ? nowMs() + minutes * 60000 : 0 } : null;
+}
+
+function currentHomeBoard() {
+  if (!homeBoard) return null;
+  if (homeBoard.until && nowMs() > homeBoard.until) { homeBoard = null; return null; }
+  return { title: homeBoard.title, lines: homeBoard.lines };
+}
+
 function info(cb) {
-  cb({ ok: true, lines: homeInfo });
+  cb({ ok: true, lines: homeInfo, board: currentHomeBoard() });
 }
 
 function loadWeather() {
@@ -3297,7 +3335,7 @@ function beat(body) {
            build: buildId, wallpapers: wallpapers.status(),
            layoutVersion: layoutVersion(), sleeps: sleeps, trace: fs.existsSync(traceFile()),
            // So a push shows within a heartbeat rather than at the next poll.
-           weather: currentWeather(), remoteBattery: remoteBatteryBadge(), info: homeInfo };
+           weather: currentWeather(), remoteBattery: remoteBatteryBadge(), info: homeInfo, board: currentHomeBoard() };
 }
 
 /*
@@ -4187,6 +4225,7 @@ module.exports = {
   now: now,
   setWeather: setWeather,
   setHomeInfo: setHomeInfo,
+  setHomeBoard: setHomeBoard,
   info: info,
   weatherPlaces: weatherPlaces,
   weather: weather,

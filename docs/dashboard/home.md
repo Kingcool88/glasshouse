@@ -565,6 +565,8 @@ Up to four lines of your own after the weather, or before the clock in the Alter
 
 The icon is a [Material Design Icons](https://pictogrammers.com/library/mdi/) name, with or without `mdi:`. Glasshouse Home draws its own outline for names starting with trash, delete, recycle, mail, email, post, chart, trending, finance, cash, car, flash, lightning, power, battery, calendar, thermometer, home, package and truck, and a dot for any other. A line without an icon has none.
 
+Beside them, a **board**: a title and up to twenty lines, shown four at a time and turning to the next four every 8 seconds, such as the day's football matches with their scores and kick-off times. It shows what was last written to the `text.lg_tv_home_board` entity, `{"title":"Football today","minutes":10,"lines":[{"label":"Arsenal 2–1 Chelsea","value":"67'"}]}`. Results go stale, so the board is not kept across a restart, and with `minutes` it goes that long after the last push, as when Home Assistant stops sending. An empty value takes it away at once.
+
 ### Remote battery
 
 The Magic Remote's battery, as a remote outline and a percentage after the date, in orange once it is down to 20%. It is the level the remote last reported, the same one the dashboard's Remote section shows. A remote that reports only High, Medium or Low (such as an MR19) shows that word instead, in orange at Low. The **Remote battery** setting chooses when it appears:
