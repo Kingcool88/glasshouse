@@ -57,6 +57,13 @@ var SORTS = ['custom', 'recent'];
 var SHOW_KEYS = ['showClock', 'showLastOn', 'showAppCount', 'showAppLabels', 'showCec', 'showTvLogos', 'showPointer'];
 // Where the weather badge's weather comes from: nowhere, Home Assistant's pushes, or Open-Meteo.
 var WEATHER_SOURCES = ['off', 'ha', 'internet'];
+// Where the lines beside the clock come from: nowhere, Home Assistant
+// entities chosen on the dashboard, or lines Home Assistant sends.
+var INFO_SOURCES = ['off', 'entities', 'ha'];
+// Where the board beside them comes from: nowhere, the day's matches in the
+// leagues chosen on the dashboard (lib/scores), or a board Home Assistant sends.
+var BOARD_SOURCES = ['off', 'scores', 'ha'];
+var scoresLib = require('./scores');
 // The Magic Remote's battery beside the date: never, only once it is low, or always.
 var REMOTE_BATTERY = ['off', 'low', 'always'];
 // At or under this, the badge shows in 'low' and is drawn as low. A remote
@@ -505,6 +512,11 @@ function defaults() {
     // Where the weather comes from, and the place Open-Meteo is asked about.
     weather: 'ha',
     weatherPlace: null,
+    // The lines beside the clock, and the entities they read.
+    info: 'entities',
+    infoLines: [],
+    board: 'off',
+    boardLeagues: [],
     // The live preview kept on what was last on whenever the view is on
     // screen, rather than only while a tile is chosen.
     previewAlways: false,
@@ -643,6 +655,10 @@ function normalise(raw) {
   // Before the choice, a Weather switch: off, or Home Assistant's.
   d.weather = WEATHER_SOURCES.indexOf(raw.weather) !== -1 ? raw.weather : raw.showWeather === false ? 'off' : 'ha';
   d.weatherPlace = weatherPlaceOf(raw.weatherPlace);
+  d.info = INFO_SOURCES.indexOf(raw.info) !== -1 ? raw.info : 'entities';
+  d.infoLines = infoLinesOf(raw.infoLines);
+  d.board = BOARD_SOURCES.indexOf(raw.board) !== -1 ? raw.board : 'off';
+  d.boardLeagues = stringList(raw.boardLeagues).filter(function (id) { return !!scoresLib.league(id); });
   d.rowsBottom = raw.rowsBottom === true;
   d.reopenAfterWake = raw.reopenAfterWake !== false;
   d.view = raw.view === 'alternative' ? 'alternative' : 'standard';
@@ -879,6 +895,10 @@ function setLayout(body, cb) {
     weather: body.weather !== undefined ? body.weather
       : typeof body.showWeather === 'boolean' ? (body.showWeather ? 'ha' : 'off') : c.weather,
     weatherPlace: body.weatherPlace !== undefined ? body.weatherPlace : c.weatherPlace,
+    info: body.info !== undefined ? body.info : c.info,
+    infoLines: body.infoLines !== undefined ? body.infoLines : c.infoLines,
+    board: body.board !== undefined ? body.board : c.board,
+    boardLeagues: body.boardLeagues !== undefined ? body.boardLeagues : c.boardLeagues,
     previewAlways: typeof body.previewAlways === 'boolean' ? body.previewAlways : c.previewAlways,
     previewInTile: typeof body.previewInTile === 'boolean' ? body.previewInTile : c.previewInTile,
     previewSize: body.previewSize !== undefined ? body.previewSize : c.previewSize,
@@ -932,6 +952,8 @@ function setLayout(body, cb) {
   if (c.picture !== config.picture) pictureDetailsFn(config.picture);
   if (JSON.stringify(c.deviceNames) !== JSON.stringify(config.deviceNames)) onDeviceNamesFn();
   if (config.weather === 'internet') setTimeout(internetWeatherTick, 0);
+  if (JSON.stringify(c.infoLines) !== JSON.stringify(config.infoLines)) { entityInfo = null; entityInfoAt = 0; }
+  if (JSON.stringify(c.boardLeagues) !== JSON.stringify(config.boardLeagues) || c.board !== config.board) { scores = null; scoresAt = 0; }
   // A row back in its own order keeps no record of what was opened.
   ROWS.forEach(function (r) { if (config.sort[r] !== 'recent') recent.forget(r); });
   cb({ ok: true, layout: layoutOf(config), layoutVersion: layoutVersion() });
@@ -1026,7 +1048,7 @@ function layoutOf(c) {
     searchHintSeen: c.searchHintSeen, picture: c.picture, livePreview: c.livePreview, search: c.search, recommended: c.recommended,
     fade: c.fade, wallDrift: c.wallDrift, wallCrossfade: c.wallCrossfade, smoothScroll: c.smoothScroll, slidePanels: c.slidePanels,
     darkening: c.darkening, hideUnused: c.hideUnused, showMediaServers: c.showMediaServers, deviceNames: devNamesNow(c.deviceNames), appNames: c.appNames, appCards: c.appCards, focusPulse: c.focusPulse, navSound: c.navSound, pointerSound: c.pointerSound, ownSound: ownSoundInfo(), cardFade: c.cardFade, appIcons: c.appIcons, inputBarTransparent: c.inputBarTransparent, inputBarSwitchOnOk: c.inputBarSwitchOnOk, showClock: c.showClock, rowsBottom: c.rowsBottom, view: c.view,
-    showLastOn: c.showLastOn, showAppCount: c.showAppCount, showAppLabels: c.showAppLabels, showCec: c.showCec, showTvLogos: c.showTvLogos, showPointer: c.showPointer, reopenAfterWake: c.reopenAfterWake, weather: c.weather, weatherPlace: c.weatherPlace, previewAlways: c.previewAlways, previewInTile: c.previewInTile, previewSize: c.previewSize, previewSound: c.previewSound, wallAnim: c.wallAnim,
+    showLastOn: c.showLastOn, showAppCount: c.showAppCount, showAppLabels: c.showAppLabels, showCec: c.showCec, showTvLogos: c.showTvLogos, showPointer: c.showPointer, reopenAfterWake: c.reopenAfterWake, weather: c.weather, weatherPlace: c.weatherPlace, info: c.info, infoLines: c.infoLines, board: c.board, boardLeagues: c.boardLeagues, scoresLeagues: scoresLib.LEAGUES, previewAlways: c.previewAlways, previewInTile: c.previewInTile, previewSize: c.previewSize, previewSound: c.previewSound, wallAnim: c.wallAnim,
     remoteBattery: c.remoteBattery,
     animTheme: c.animTheme, animSky: c.animSky, animLight: c.animLight, animThemes: ANIM_THEMES,
     wallShuffleMinutes: c.wallShuffleMinutes, shuffleMinutes: SHUFFLE_MINUTES, colours: c.colours,
@@ -1981,13 +2003,19 @@ function homeInfoLines(list, max, labelMax) {
 
 function setHomeInfo(raw) {
   var text = String(raw == null ? '' : raw).trim();
-  var lines = [];
+  var parsed = null;
   if (text) {
-    var parsed = null;
     try { parsed = JSON.parse(text); } catch (e) { return; }
-    lines = homeInfoLines(parsed && !isArray(parsed) ? parsed.items : parsed, HOME_INFO_MAX, HOME_INFO_LABEL_MAX);
-    if (!lines) return;
+    if (parsed && !isArray(parsed) && isArray(parsed.items)) parsed = parsed.items;
+    if (!isArray(parsed)) return;
   }
+  var lines = [];
+  (parsed || []).forEach(function (item) {
+    if (lines.length >= HOME_INFO_MAX || !item || typeof item !== 'object') return;
+    var line = { icon: homeInfoIcon(item.icon), label: homeInfoText(item.label, HOME_INFO_LABEL_MAX),
+                 value: homeInfoText(item.value, HOME_INFO_VALUE_MAX) };
+    if (line.label || line.value) lines.push(line);
+  });
   homeInfo = lines;
   try {
     if (lines.length) writeJsonAtomic(homeInfoFile(), lines, 384);
@@ -2004,8 +2032,83 @@ function loadHomeInfo() {
 }
 
 /*
+ * Lines from entities chosen on the dashboard: an entity, optionally one of
+ * its attributes in place of its state, a label in place of its name and a
+ * few words before the value ("collected", "arrives"). Read through Home
+ * Assistant's API (lib/haentity) while the view is in front, at most every
+ * ENTITY_INFO_MS, and kept as last read when a read fails. The view formats
+ * the value: a date as today, tomorrow or a weekday, a number with its unit.
+ */
+var ENTITY_INFO_MS = 30000;
+var INFO_ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;
+/** @type {typeof import('./haentity')} */
+var haEntityModule = null;
+var entityInfo = null;     // [{ icon, label, before, v, unit }] as last read
+var entityInfoAt = 0;
+var entityInfoReading = false;
+
+function infoLinesOf(raw) {
+  var out = [];
+  (isArray(raw) ? raw : []).forEach(function (l) {
+    if (out.length >= HOME_INFO_MAX || !l || typeof l !== 'object') return;
+    var entity = String(l.entity || '').trim().toLowerCase();
+    if (!INFO_ENTITY_RE.test(entity)) return;
+    var attribute = homeInfoText(l.attribute, 64).replace(/[^A-Za-z0-9_]/g, '');
+    out.push({ entity: entity, attribute: attribute, label: homeInfoText(l.label, HOME_INFO_LABEL_MAX),
+               before: homeInfoText(l.before, 24) });
+  });
+  return out;
+}
+
+// An icon for an entity without its own, from what it measures.
+var INFO_CLASS_ICONS = { battery: 'battery', temperature: 'thermometer', timestamp: 'calendar', date: 'calendar',
+  monetary: 'cash', energy: 'flash', power: 'flash', distance: 'car' };
+
+function entityLine(cfgLine, read) {
+  var attrs = read ? read.attributes || {} : {};
+  var raw = !read ? null : cfgLine.attribute ? attrs[cfgLine.attribute] : read.state;
+  if (raw !== null && raw !== undefined && typeof raw === 'object') raw = null;
+  return {
+    icon: homeInfoIcon(attrs.icon) || INFO_CLASS_ICONS[attrs.device_class] || '',
+    label: cfgLine.label || homeInfoText(attrs.friendly_name, HOME_INFO_LABEL_MAX) || cfgLine.entity,
+    before: cfgLine.before,
+    v: raw === null || raw === undefined ? '' : homeInfoText(raw, HOME_INFO_VALUE_MAX),
+    unit: cfgLine.attribute ? '' : homeInfoText(attrs.unit_of_measurement, 12)
+  };
+}
+
+function refreshEntityInfo() {
+  var c = readConfig();
+  if (c.info !== 'entities' || !c.infoLines.length || !haEntityModule || !haEntityModule.configured()) return;
+  if (entityInfoReading || nowMs() - entityInfoAt < ENTITY_INFO_MS) return;
+  entityInfoReading = true;
+  var wanted = c.infoLines;
+  var ids = [];
+  wanted.forEach(function (l) { if (ids.indexOf(l.entity) === -1) ids.push(l.entity); });
+  haEntityModule.readMany(ids, function (r) {
+    entityInfoReading = false;
+    entityInfoAt = nowMs();
+    if (JSON.stringify(readConfig().infoLines) !== JSON.stringify(wanted)) return;
+    var before = entityInfo || [];
+    entityInfo = wanted.map(function (l, i) {
+      var read = r && r.entities ? r.entities[l.entity] : null;
+      // A read that failed keeps the line as it was rather than blanking it.
+      return read || !before[i] ? entityLine(l, read) : before[i];
+    });
+  });
+}
+
+// The lines the view shows, from the chosen source.
+function currentInfo() {
+  var c = readConfig();
+  if (c.info === 'ha') return homeInfo;
+  if (c.info === 'entities') return entityInfo || [];
+  return [];
+}
+
+/*
  * A board beside them: a title and a longer list the view shows a few lines
- * at a time, as the day's matches. text.lg_tv_home_board's command topic:
+ * at a time. text.lg_tv_home_board's command topic:
  *   {"title":"Football today","minutes":10,"lines":[{"label":"Arsenal 2-1 Chelsea","value":"67'"}]}
  * Live results go stale, so it is not kept across a restart, and with
  * minutes it is taken away that long after the last push, as when Home
@@ -2028,14 +2131,58 @@ function setHomeBoard(raw) {
   homeBoard = title || lines.length ? { title: title, lines: lines, until: minutes ? nowMs() + minutes * 60000 : 0 } : null;
 }
 
-function currentHomeBoard() {
-  if (!homeBoard) return null;
-  if (homeBoard.until && nowMs() > homeBoard.until) { homeBoard = null; return null; }
-  return { title: homeBoard.title, lines: homeBoard.lines };
+/*
+ * The day's matches in the leagues chosen on the dashboard, read from ESPN
+ * (lib/scores) at most every SCORES_MS while Home is on screen and the TV
+ * on. A read that fails keeps the last for SCORES_STALE_MS; a new day starts
+ * empty.
+ */
+var SCORES_MS = 60000;
+var SCORES_STALE_MS = 15 * 60000;
+/** @type {typeof import('./scores')} */
+var scoresModule = null;
+var scores = null;          // { day, at, matches }
+var scoresAt = 0;
+var scoresReading = false;
+
+function refreshScores() {
+  var c = readConfig();
+  if (c.board !== 'scores' || !c.boardLeagues.length || !scoresModule || !powerActive) return;
+  if (scoresReading || nowMs() - scoresAt < SCORES_MS) return;
+  scoresReading = true;
+  scoresAt = nowMs();
+  var wanted = c.boardLeagues.join(',');
+  scoresModule.today(c.boardLeagues, nowMs(), function (err, matches) {
+    scoresReading = false;
+    if (readConfig().boardLeagues.join(',') !== wanted) return;
+    if (err) return console.error('home: could not read the scores: ' + err.message);
+    scores = { day: scoresModule.dayOf(nowMs()), at: nowMs(), matches: matches };
+  });
+}
+
+function currentBoard() {
+  var c = readConfig();
+  if (c.board === 'ha') {
+    if (!homeBoard) return null;
+    if (homeBoard.until && nowMs() > homeBoard.until) { homeBoard = null; return null; }
+    return { title: homeBoard.title, lines: homeBoard.lines };
+  }
+  if (c.board === 'scores' && c.boardLeagues.length && scores && scoresModule) {
+    if (scores.day !== scoresModule.dayOf(nowMs()) || nowMs() - scores.at > SCORES_STALE_MS) return null;
+    return { kind: 'scores', leagues: c.boardLeagues.map(function (id) { return scoresLib.league(id).short; }),
+             matches: scores.matches.map(function (m) {
+               var o = {}; for (var k in m) o[k] = m[k];
+               o.league = scoresLib.league(m.league).short;
+               return o;
+             }) };
+  }
+  return null;
 }
 
 function info(cb) {
-  cb({ ok: true, lines: homeInfo, board: currentHomeBoard() });
+  refreshEntityInfo();
+  refreshScores();
+  cb({ ok: true, lines: currentInfo(), board: currentBoard() });
 }
 
 function loadWeather() {
@@ -3325,7 +3472,7 @@ function beat(body) {
   // Whether Internet TV is in front, its guide or a player: Home Assistant's media player shows IPTV then.
   if (iptvModule && body && typeof body.iptv === 'boolean') iptvModule.front(body.iptv && viewInFront());
   beats++;
-  if (viewInFront()) watchBeat(beatGraceMs);
+  if (viewInFront()) { watchBeat(beatGraceMs); refreshEntityInfo(); refreshScores(); }
   var saver = powerState === 'Screen Saver' || !!(screensaversModule && screensaversModule.launchedShowing());
   // As last seen: the reply does not wait for videooutput.
   var onScreen = wallVideoOnScreen;
@@ -3335,7 +3482,7 @@ function beat(body) {
            build: buildId, wallpapers: wallpapers.status(),
            layoutVersion: layoutVersion(), sleeps: sleeps, trace: fs.existsSync(traceFile()),
            // So a push shows within a heartbeat rather than at the next poll.
-           weather: currentWeather(), remoteBattery: remoteBatteryBadge(), info: homeInfo, board: currentHomeBoard() };
+           weather: currentWeather(), remoteBattery: remoteBatteryBadge(), info: currentInfo(), board: currentBoard() };
 }
 
 /*
@@ -3953,6 +4100,15 @@ function init(opts) {
   loadWeather();
   loadHomeInfo();
   weatherModule = opts.weather || null;
+  haEntityModule = opts.haEntity || null;
+  scoresModule = opts.scores || null;
+  scores = null;
+  scoresAt = 0;
+  scoresReading = false;
+  homeBoard = null;
+  entityInfo = null;
+  entityInfoAt = 0;
+  entityInfoReading = false;
   loadInternetWeather();
   config = null;
   configMtime = 0;

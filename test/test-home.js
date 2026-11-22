@@ -3613,7 +3613,7 @@ step('the weather Home Assistant pushes is kept across a restart, capped, hidden
 });
 
 step('the info lines Home Assistant pushes are capped, kept across a restart and cleared by an empty push', function (done) {
-  start(null);
+  start({ enabled: false, info: 'ha' });
   home.setHomeInfo('not json');
   home.setHomeInfo('{"label":"one"}');
   assert.deepEqual(home.beat().info, [], 'nothing shown from a push that is not a list');
@@ -3642,29 +3642,102 @@ step('the info lines Home Assistant pushes are capped, kept across a restart and
   });
 });
 
-step('the board Home Assistant pushes has a title and up to twenty lines, and goes once its minutes are up', function (done) {
+step('lines from entities chosen on the dashboard are read through Home Assistant, at most every 30 seconds, and kept when a read fails', function (done) {
   var clock = Date.now();
-  start(null, { now: function () { return clock; } });
-  home.setHomeBoard('not json');
-  assert.strictEqual(home.beat().board, null, 'nothing shown from a push that is not JSON');
-  var lines = [];
-  for (var i = 0; i < 25; i++) lines.push({ label: 'Team ' + i + ' 1-0 Team ' + (i + 1), value: "67'" });
-  home.setHomeBoard(JSON.stringify({ title: 'Football today', minutes: 10, lines: lines }));
-  var b = home.beat().board;
-  assert.strictEqual(b.title, 'Football today');
-  assert.strictEqual(b.lines.length, 20, 'twenty at most');
-  assert.deepEqual(b.lines[0], { icon: '', label: 'Team 0 1-0 Team 1', value: "67'" });
-  home.setHomeBoard(JSON.stringify({ title: 'Football today', lines: [{ label: 'No matches today' }] }));
-  assert.strictEqual(home.beat().board.lines.length, 1, 'a later push replaces it');
-  home.setHomeBoard(JSON.stringify({ title: 'Football today', minutes: 10, lines: [] }));
-  assert.deepEqual(home.beat().board, { title: 'Football today', lines: [] }, 'a title alone is shown');
-  clock += 10 * 60000 + 1000;
-  assert.strictEqual(home.beat().board, null, 'gone once its minutes are up');
-  home.setHomeBoard(JSON.stringify({ title: 'x', lines: [] }));
-  home.setHomeBoard('');
-  home.info(function (r) {
-    assert.strictEqual(r.board, null, 'an empty push takes it away');
-    done();
+  var reads = [];
+  var answer = {
+    'sensor.bin_1': { state: 'on 25-Nov-2026', attributes: { friendly_name: 'Bin 1', next_date: '2026-11-25T00:00:00+01:00', icon: 'mdi:trash-can' } },
+    'sensor.visc': { state: '14.58', attributes: { friendly_name: 'Viscaria', unit_of_measurement: 'SEK', device_class: 'monetary' } }
+  };
+  var ha = {
+    configured: function () { return true; },
+    readMany: function (ids, cb) {
+      reads.push(ids.slice());
+      var out = {};
+      ids.forEach(function (id) { if (answer[id]) out[id] = answer[id]; });
+      cb({ ok: true, entities: out, errors: {} });
+    }
+  };
+  start(null, { now: function () { return clock; }, haEntity: ha });
+  assert.strictEqual(home.layout().info, 'entities', 'entities unless chosen otherwise');
+  home.setLayout({ infoLines: [
+    { entity: 'sensor.bin_1', attribute: 'next_date', label: 'Bin 1', before: 'collected' },
+    { entity: 'SENSOR.VISC' },
+    { entity: 'not an entity' },
+    { entity: 'sensor.a' }, { entity: 'sensor.b' }, { entity: 'sensor.c' }
+  ] }, function (r) {
+    assert.strictEqual(r.layout.infoLines.length, 4, 'four at most, a malformed one left out');
+    assert.strictEqual(r.layout.infoLines[1].entity, 'sensor.visc', 'lower-cased');
+    home.info(function (i1) {
+      assert.deepEqual(reads, [['sensor.bin_1', 'sensor.visc', 'sensor.a', 'sensor.b']]);
+      var lines = i1.lines.length ? i1.lines : home.beat().info;
+      assert.deepEqual(lines[0], { icon: 'trash-can', label: 'Bin 1', before: 'collected', v: '2026-11-25T00:00:00+01:00', unit: '' }, 'the attribute, without a unit');
+      assert.deepEqual(lines[1], { icon: 'cash', label: 'Viscaria', before: '', v: '14.58', unit: 'SEK' }, 'its name and unit, an icon from its class');
+      assert.strictEqual(lines[2].v, '', 'an entity Home Assistant does not have reads empty');
+      home.info(function () {});
+      assert.strictEqual(reads.length, 1, 'not read again within 30 seconds');
+      clock += 31000;
+      answer = {};
+      home.info(function () {});
+      assert.strictEqual(reads.length, 2, 'read again after 30 seconds');
+      assert.strictEqual(home.beat().info[1].v, '14.58', 'a failed read keeps the line as it was');
+      home.setLayout({ info: 'off' }, function () {
+        assert.deepEqual(home.beat().info, [], 'off shows none');
+        home.setLayout({ info: 'ha' }, function () {
+          home.setHomeInfo(JSON.stringify([{ label: 'Pushed', value: 'x' }]));
+          assert.strictEqual(home.beat().info[0].label, 'Pushed', 'Home Assistant\'s pushes shown while chosen');
+          done();
+        });
+      });
+    });
+  });
+});
+
+step('the board: today\'s matches in the leagues chosen, read at most once a minute, or a board Home Assistant pushes', function (done) {
+  var clock = Date.now();
+  var asked = 0;
+  var matches = [{ league: 'soccer/eng.1', start: clock, state: 'in', status: 'STATUS_HALFTIME', clock: "45'",
+                   home: 'Hull', away: 'Brighton', homeScore: '1', awayScore: '0' }];
+  var fail = false;
+  var scoresFake = {
+    dayOf: require('../server/lib/scores').dayOf,
+    today: function (ids, now, cb) { asked++; return fail ? cb(new Error('offline')) : cb(null, matches); }
+  };
+  start(null, { now: function () { return clock; }, scores: scoresFake });
+  assert.strictEqual(home.layout().board, 'off', 'off unless chosen');
+  assert.ok(home.layout().scoresLeagues.length > 5, 'the leagues offered come with the layout');
+  home.setLayout({ board: 'scores', boardLeagues: ['soccer/eng.1', 'soccer/nowhere', 'soccer/uefa.champions'] }, function (r) {
+    assert.deepEqual(r.layout.boardLeagues, ['soccer/eng.1', 'soccer/uefa.champions'], 'unknown leagues left out');
+    home.info(function (i1) {
+      assert.strictEqual(asked, 1);
+      var b = i1.board || home.beat().board;
+      assert.strictEqual(b.kind, 'scores');
+      assert.deepEqual(b.leagues, ['PL', 'CL']);
+      assert.strictEqual(b.matches[0].league, 'PL', 'each match by its league\'s short name');
+      home.info(function () {});
+      assert.strictEqual(asked, 1, 'not again within a minute');
+      clock += 61000;
+      fail = true;
+      home.info(function () {});
+      assert.strictEqual(asked, 2, 'again after a minute');
+      assert.strictEqual(home.beat().board.matches.length, 1, 'a failed read keeps the last');
+      clock += 16 * 60000;
+      assert.strictEqual(home.beat().board, null, 'gone once 15 minutes old');
+      home.setLayout({ board: 'ha' }, function () {
+        var lines = [];
+        for (var i = 0; i < 25; i++) lines.push({ label: 'Team ' + i, value: "67'" });
+        home.setHomeBoard(JSON.stringify({ title: 'Football today', minutes: 10, lines: lines }));
+        var pushed = home.beat().board;
+        assert.strictEqual(pushed.title, 'Football today');
+        assert.strictEqual(pushed.lines.length, 20, 'twenty at most');
+        clock += 10 * 60000 + 1000;
+        assert.strictEqual(home.beat().board, null, 'a pushed board goes once its minutes are up');
+        home.setHomeBoard(JSON.stringify({ title: 'x', lines: [] }));
+        home.setHomeBoard('');
+        assert.strictEqual(home.beat().board, null, 'an empty push takes it away');
+        done();
+      });
+    });
   });
 });
 

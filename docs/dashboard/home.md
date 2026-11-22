@@ -87,11 +87,17 @@ Preview cards at the top of the **Home** tab switch between five launcher option
 
     Displays current temperature, condition icon, and location level with the clock, sourced from Home Assistant or Open-Meteo. See [Weather badge](#weather-badge).
 
+-   **Board**
+
+    ---
+
+    Today's matches in the leagues you choose, with kick-off times and live scores, four at a time, read from ESPN. See [Board](#board).
+
 -   **Lines from Home Assistant**
 
     ---
 
-    Up to four short lines beside the clock, each an icon, a label and a value sent from Home Assistant: the next bin collection, the post, a share price. See [Lines from Home Assistant](#lines-from-home-assistant).
+    Up to four short lines beside the clock, each a Home Assistant entity's value chosen on the dashboard, or lines Home Assistant sends: the next bin collection, the post, a share price. See [Lines from Home Assistant](#lines-from-home-assistant).
 
 -   **Badges & labels**
 
@@ -561,11 +567,26 @@ The badge appears once data is received, is kept when the TV restarts, and is hi
 
 ### Lines from Home Assistant
 
-Up to four lines of your own after the weather, or before the clock in the Alternative View: each an icon, a label and a value, such as *Bin 1 · in 4 days* or *PostNord · Friday*. They show whatever was last written to the `text.lg_tv_home_info` entity, a JSON list such as `[{"icon":"trash-can","label":"Bin 1","value":"in 4 days"}]` ([entities](../HOME-ASSISTANT-ENTITIES.md)), and stay, across a restart too, until the next one. An empty value or `[]` takes them away. An automation keeps them current ([example automation](../HOME-ASSISTANT.md#8-your-own-lines-on-glasshouse-home)).
+Up to four lines of your own after the weather, or before the clock in the Alternative View, each an icon, a label and a value: *Bin 1 · collected on Wednesday*, *PostNord · arrives tomorrow*, *Viscaria · 14.58 SEK*. The **Lines from Home Assistant** setting chooses where they come from:
 
-The icon is a [Material Design Icons](https://pictogrammers.com/library/mdi/) name, with or without `mdi:`. Glasshouse Home draws its own outline for names starting with trash, delete, recycle, mail, email, post, chart, trending, finance, cash, car, flash, lightning, power, battery, calendar, thermometer, home, package and truck, and a dot for any other. A line without an icon has none.
+* **Entities you choose (default):** each line reads a Home Assistant entity, through the [Home Assistant API](../HOME-ASSISTANT.md#screen-savers-reading-home-assistant) the screen savers use, every 30 seconds while Home is on screen. For each, pick the entity (the field lists Home Assistant's), and optionally:
+  * **Attribute:** one of its attributes in place of its state, such as `next_date` for a bin collection whose state is text.
+  * **Label:** in place of the entity's name.
+  * **Before the value:** a few words in front of it, such as *collected* or *arrives*.
 
-Beside them, a **board**: a title and up to twenty lines, shown four at a time and turning to the next four every 8 seconds, such as the day's football matches with their scores and kick-off times. It shows what was last written to the `text.lg_tv_home_board` entity, `{"title":"Football today","minutes":10,"lines":[{"label":"Arsenal 2–1 Chelsea","value":"67'"}]}`. Results go stale, so the board is not kept across a restart, and with `minutes` it goes that long after the last push, as when Home Assistant stops sending. An empty value takes it away at once.
+  A date shows as today, tomorrow, a weekday within the week, or a day and month after that, in the page's language. A number shows with its own decimals and its unit. Anything else shows as Home Assistant has it. The icon is the entity's own, or one for what it measures.
+* **Sent from Home Assistant:** whatever was last written to the `text.lg_tv_home_info` entity, a JSON list such as `[{"icon":"trash-can","label":"Bin 1","value":"in 4 days"}]` ([entities](../HOME-ASSISTANT-ENTITIES.md)), kept across a restart until the next one. An empty value or `[]` takes them away ([example automation](../HOME-ASSISTANT.md#7-your-own-lines-on-glasshouse-home)).
+* **Off.**
+
+Icons are [Material Design Icons](https://pictogrammers.com/library/mdi/) names, with or without `mdi:`. Glasshouse Home draws its own outline for names starting with trash, delete, recycle, mail, email, post, chart, trending, finance, cash, car, flash, lightning, power, battery, calendar, thermometer, home, package and truck, and a dot for any other.
+
+### Board
+
+Beside the lines, a board of up to twenty lines shown four at a time, turning to the next four every 8 seconds, with a page count by its title. The **Board** setting chooses what it shows:
+
+* **Today's matches:** the day's matches in the leagues you pick from the list (Premier League, Champions League, La Liga, Allsvenskan, the NHL and more): the sides and kick-off time before a match, the score and the minute during it, *HT* at half time and *FT* after. With two leagues or more chosen, each line starts with its league's short name, and a day without a match says so. The TV reads the matches from ESPN's public scoreboard, which needs no account, once a minute while Home is on screen and the TV is on, sending only the league and the date. Results not updated for 15 minutes are taken away.
+* **Sent from Home Assistant:** whatever was last written to the `text.lg_tv_home_board` entity, `{"title":"Football today","minutes":10,"lines":[{"label":"Arsenal 2–1 Chelsea","value":"67'"}]}`. It is not kept across a restart, and with `minutes` it goes that long after the last push. An empty value takes it away at once.
+* **Off (default).**
 
 ### Remote battery
 
