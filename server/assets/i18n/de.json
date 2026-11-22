@@ -1014,6 +1014,7 @@
  "rp.standby": {"text": "Der Fernseher ist im Standby. Schalten Sie ihn ein, um die Fernbedienung zu nutzen.", "from": "The TV is in standby. Power on to use the remote."},
  "apps.remoteKeys.guideNative": {"text": "Bei diesem Fernseher braucht die Guide-Taste eine Änderung an LGs Tastenverwaltung. Beim Einstellen startet der Bildschirm einmal neu, danach bei jedem Start des Fernsehers erneut.", "from": "On this TV the Guide key needs a change to LG’s key handler. Setting it restarts the TV’s screen once, and again each time the TV starts."},
  "apps.remoteKeys.inputNative": {"text": "Bei diesem Fernseher braucht die Input-Taste eine Änderung an LGs Tastenverwaltung. Beim Einstellen und beim Zurücksetzen auf LGs Liste startet der Bildschirm einmal neu, und die Änderung wird bei jedem Start des Fernsehers erneut vorgenommen.", "from": "On this TV the Input key needs a change to LG’s key handler. Setting it, or setting it back to LG’s list, restarts the TV’s screen once, and the change is made again each time the TV starts."},
+ "apps.remoteKeys.channel": {"text": "Kanaltasten", "from": "Channel keys"},
  "apps.remoteKeys.channelNative": {"text": "Bei diesem Fernseher brauchen die Kanaltasten eine Änderung an LGs Tastenverwaltung. Beim Einstellen einer Taste, oder beim Zurücksetzen einer Taste auf „Wie von LG“, startet der Bildschirm einmal neu, und die Änderung wird bei jedem Start des Fernsehers erneut vorgenommen. Solange sie eingestellt ist, wechselt die Taste keinen Kanal mehr.", "from": "On this TV the channel keys need a change to LG’s key handler. Setting one, or setting one back to As LG has it, restarts the TV’s screen once, and the change is made again each time the TV starts. While set, the key no longer changes the channel."},
  "home.bar.native": {"text": "Bei diesem Fernseher braucht die Home-Taste für Glasshouse Bar eine Änderung an LGs Tastenverwaltung. Das Wählen der Leiste, oder danach eines anderen Launchers, startet den Bildschirm einmal neu, und die Änderung wird bei jedem Start des Fernsehers erneut vorgenommen.", "from": "On this TV the Home key needs a change to LG’s key handler for Glasshouse Bar. Choosing the bar, or any other launcher after it, restarts the TV’s screen once, and the change is made again each time the TV starts."},
  "ss.art.mine": {"text": "Ihre Bilder", "from": "Your pictures"},
@@ -1133,5 +1134,156 @@
  "home.info.today": {"from": "today", "text": "heute"},
  "home.info.tomorrow": {"from": "tomorrow", "text": "morgen"},
  "home.info.weekday": {"from": "on {weekday}", "text": "am {weekday}"},
- "ha.api.desc": {"text": "Liest Home-Assistant-Entitäten live für die Home-Assistant-Bildschirmschoner (Ambient und Data Display) im Tab Bildschirmschoner und für die Werte auf einen Blick neben der Uhr von Glasshouse Home im Tab Home. Verbindet sich direkt über HTTP/HTTPS mit Home Assistant, ohne MQTT, und speichert ohne Neustart.", "from": "Reads live Home Assistant entities for the Home Assistant screen savers (Ambient and Data Display) on the Screensaver tab, and for the values at a glance beside Glasshouse Home's clock on the Home tab. Connects straight to Home Assistant over HTTP/HTTPS without using MQTT, and saves without restarting."}
+ "ha.api.desc": {"text": "Liest Home-Assistant-Entitäten live für die Home-Assistant-Bildschirmschoner (Ambient und Data Display) im Tab Bildschirmschoner und für die Werte auf einen Blick neben der Uhr von Glasshouse Home im Tab Home. Verbindet sich direkt über HTTP/HTTPS mit Home Assistant, ohne MQTT, und speichert ohne Neustart.", "from": "Reads live Home Assistant entities for the Home Assistant screen savers (Ambient and Data Display) on the Screensaver tab, and for the values at a glance beside Glasshouse Home's clock on the Home tab. Connects straight to Home Assistant over HTTP/HTTPS without using MQTT, and saves without restarting."},
+  "ha.domain.all": {
+    "text": "Alle",
+    "from": "All"
+  },
+  "ha.domain.binarySensor": {
+    "text": "Binärsensoren",
+    "from": "Binary sensors"
+  },
+  "ha.domain.calendar": {
+    "text": "Kalender",
+    "from": "Calendars"
+  },
+  "ha.domain.climate": {
+    "text": "Klima",
+    "from": "Climate"
+  },
+  "ha.domain.counter": {
+    "text": "Zähler",
+    "from": "Counters"
+  },
+  "ha.domain.cover": {
+    "text": "Abdeckungen",
+    "from": "Covers"
+  },
+  "ha.domain.deviceTracker": {
+    "text": "Tracker",
+    "from": "Trackers"
+  },
+  "ha.domain.fan": {
+    "text": "Ventilatoren",
+    "from": "Fans"
+  },
+  "ha.domain.inputBoolean": {
+    "text": "Schalter-Helfer",
+    "from": "Input booleans"
+  },
+  "ha.domain.inputNumber": {
+    "text": "Zahlen-Helfer",
+    "from": "Input numbers"
+  },
+  "ha.domain.inputSelect": {
+    "text": "Auswahl-Helfer",
+    "from": "Input select"
+  },
+  "ha.domain.inputText": {
+    "text": "Text-Helfer",
+    "from": "Input text"
+  },
+  "ha.domain.light": {
+    "text": "Lichter",
+    "from": "Lights"
+  },
+  "ha.domain.lock": {
+    "text": "Schlösser",
+    "from": "Locks"
+  },
+  "ha.domain.mediaPlayer": {
+    "text": "Medien",
+    "from": "Media"
+  },
+  "ha.domain.number": {
+    "text": "Zahlen",
+    "from": "Numbers"
+  },
+  "ha.domain.person": {
+    "text": "Personen",
+    "from": "People"
+  },
+  "ha.domain.sensor": {
+    "text": "Sensoren",
+    "from": "Sensors"
+  },
+  "ha.domain.sun": {
+    "text": "Sonne",
+    "from": "Sun"
+  },
+  "ha.domain.switch": {
+    "text": "Schalter",
+    "from": "Switches"
+  },
+  "ha.domain.timer": {
+    "text": "Timer",
+    "from": "Timers"
+  },
+  "ha.domain.vacuum": {
+    "text": "Staubsauger",
+    "from": "Vacuums"
+  },
+  "ha.domain.weather": {
+    "text": "Wetter",
+    "from": "Weather"
+  },
+  "ha.picker.added": {
+    "text": "Hinzugefügt",
+    "from": "Added"
+  },
+  "ha.picker.countAll": {
+    "text": "{n} Entitäten",
+    "from": "{n} entities"
+  },
+  "ha.picker.countOne": {
+    "text": "1 Entität",
+    "from": "1 entity"
+  },
+  "ha.picker.filterType": {
+    "text": "Nach Typ filtern",
+    "from": "Filter by type"
+  },
+  "ha.picker.reset": {
+    "text": "Zurücksetzen",
+    "from": "Reset"
+  },
+  "ha.picker.searchLabel": {
+    "text": "Entitäten filtern",
+    "from": "Filter entities"
+  },
+  "ha.picker.searchPlaceholder": {
+    "text": "Nach Name, Entitäts-ID oder Einheit suchen…",
+    "from": "Search by name, entity ID, or unit…"
+  },
+  "ha.picker.selected": {
+    "text": "Ausgewählt",
+    "from": "Selected"
+  },
+  "ha.picker.showMore": {
+    "text": "Mehr anzeigen ({n} verbleibend)",
+    "from": "Show more ({n} remaining)"
+  },
+  "ha.picker.showingOf": {
+    "text": "{shown} von {n} Treffern ({total} gesamt)",
+    "from": "Showing {shown} of {n} matching ({total} total)"
+  },
+  "ha.picker.withUnit": {
+    "text": "Mit Einheit",
+    "from": "With unit"
+  },
+ "apps.running.close": {"text": "Schließen", "from": "Close"},
+ "apps.running.closeAll": {"text": "Alle schließen", "from": "Close all"},
+ "apps.running.closeFailed": {"text": "App konnte nicht geschlossen werden: {error}", "from": "Could not close app: {error}"},
+ "apps.running.closing": {"text": "Wird geschlossen…", "from": "Closing…"},
+ "apps.running.desc": {"text": "Apps, die aktuell auf dem TV geöffnet oder im Arbeitsspeicher geladen sind. Das Schließen beendet den Prozess und gibt den Speicher sofort frei.", "from": "Apps currently open or loaded in memory on the TV. Closing an app stops its process and frees its memory right away."},
+ "apps.running.inFront": {"text": "Im Vordergrund", "from": "In front"},
+ "apps.running.mb": {"text": "{mb} MB", "from": "{mb} MB"},
+ "apps.running.none": {"text": "Keine aktiv", "from": "None running"},
+ "apps.running.noneDesc": {"text": "Derzeit sind keine Apps im Speicher aktiv.", "from": "No apps are currently running in memory."},
+ "apps.running.summaryMb": {"text": "{n} Apps · {mb} MB", "from": "{n} apps · {mb} MB"},
+ "apps.running.summaryOneMb": {"text": "1 App · {mb} MB", "from": "1 app · {mb} MB"},
+ "apps.running.title": {"text": "Apps im Speicher", "from": "Apps in memory"},
+ "srv.updateAsk.title": {"from": "Glasshouse {version} is out", "text": "Glasshouse {version} ist da"},
+ "srv.updateAsk.install": {"from": "Update now", "text": "Jetzt aktualisieren"},
+ "srv.updateAsk.later": {"from": "Later", "text": "Später"}
 }

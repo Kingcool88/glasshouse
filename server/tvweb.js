@@ -19,7 +19,7 @@
  * first 4096 bytes of a downloaded tvweb.js for this line (up to 0.82.2), and
  * refuses a release where it is further down (#586).
  */
-var TVWEB_VERSION = '0.158.1';
+var TVWEB_VERSION = '0.159.0';
 
 var http = require('http');
 var fs = require('fs');
@@ -66,6 +66,7 @@ var quickAccess = require('./lib/quickaccess');
 var remoteKeys = require('./lib/remotekeys');
 var inputBar = require('./lib/inputbar');
 var askQuestion = require('./lib/ask');
+var updateAsk = require('./lib/updateask');
 var compat = require('./lib/compat');
 
 /*
@@ -656,6 +657,8 @@ askQuestion.init({
   tvApp: function (action, cb) { tvApp(action, cb, 'ask-app'); },
   publish: function (ev) {
     console.log('ask: ' + ev.id + ' ' + ev.event_type + (ev.choice ? ' ' + ev.choice : ''));
+    // Glasshouse's own question about a release is not Home Assistant's.
+    if (updateAsk.onAskEvent(ev)) return;
     if (onAskAnswer) onAskAnswer(ev);
   }
 });
@@ -752,7 +755,10 @@ var liveState = stateModule.init({
   onTvChange: function (ev) {
     // Leaving an input drops game.js's bind, without waiting for someone to ask.
     if (ev.group === 'application' && ev.key === 'app_id') game.appChanged(ev.value);
-    if (ev.group === 'power' && ev.key === 'state') screensavers.onPowerChange(ev.value);
+    if (ev.group === 'power' && ev.key === 'state') {
+      screensavers.onPowerChange(ev.value);
+      pictureOnChanged(ev.value);
+    }
     tvChanged(ev);
   }
 });
@@ -847,6 +853,7 @@ controls.init({
   apps: appsModule,
   lgSettings: lgSettings,
   updater: updater,
+  updateAsk: updateAsk,
   devtools: devtools,
   ntp: ntpClient,
   history: history,
@@ -1083,6 +1090,26 @@ updater.init({
   // run over the same staging directory while this one is copying.
   afterPackage: function (ver) { hbcTried = ver; runHomebrewChannelInstaller(); }
 });
+
+// Whether the picture is on, not a screen saver, as tvpower last said.
+var pictureOn = false;
+function pictureOnChanged(raw) {
+  var state = (raw && typeof raw === 'object') ? (raw.raw || raw.state || raw) : raw;
+  var mapped = power.mapState(state);
+  var on = !!mapped.screenOn && !power.isScreenSaver(mapped);
+  if (on && !pictureOn) updateAsk.onScreenOn();
+  pictureOn = on;
+}
+// A new release asked about on the TV, where switched on on the Server tab.
+updateAsk.init({
+  config: CONFIG,
+  updater: updater,
+  ask: askQuestion,
+  writeSettings: routes.writeSettings,
+  install: function (cb) { doControl('update', null, cb); },
+  screenOn: function () { return pictureOn; }
+});
+updater.onChange(updateAsk.onUpdateChange);
 
 // Bare in the user agent: a catalog has no use for the commit.
 fetchLib.init({ config: CONFIG, version: TVWEB_VERSION });
@@ -2291,7 +2318,8 @@ function startGlasshouseHome() {
   var weather = require('./lib/weather');
   weather.init({ getJson: fetchLib.getJson });
   var news = require('./lib/news');
-  news.init({ fetchFile: fetchLib.probeFetch });
+  // A feed is stopped at its size limit as it downloads, not after (lib/fetch).
+  news.init({ fetchFile: function (url, file, cb) { return fetchLib.fetchLimited(url, file, news.FEED_MAX_BYTES, cb); } });
   glasshouseHome.init({
     // webOS 11 with the Home key changed: LG's Home stays drawn under Glasshouse Bar unless it is closed.
     lgHomeUnderBar: remoteKeys.nativeHomeBarOn,
@@ -2395,7 +2423,7 @@ if (!CLI_MODE) {
     if (ev.group === 'power' && ev.key === 'systemOn' && ev.value === true) setTimeout(refreshHomeTitles, 20000);
     if (homePicture && ev.group === 'power' && ev.key === 'systemOn') homePicture.want('tv', ev.value !== false);
     // LG puts its own streaming buttons back around each change, not always announced.
-    if (ev.group === 'power' && ev.key === 'state') remoteKeys.powerChanged(ev.value);
+    if (ev.group === 'power' && ev.key === 'state') remoteKeys.powerChanged();
     if (ev.group === 'surface' && ev.key === 'control_app_id' && ev.value === 'com.webos.app.home') refreshHomeTitles();
   });
 

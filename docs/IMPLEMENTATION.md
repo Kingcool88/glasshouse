@@ -958,8 +958,15 @@ is named, since webOS 4's filters only match `WebOS.Key_webOS_Yellow` and
 The compositor's enum knows more names than a given remote sends,
 and a case on an unknown symbol would never match. Home and Back are not
 offered, since the dashboard's own Home screen changes rely on them; volume,
-mute, channel and power are handled by the microcontroller before any filter
-sees them, so there is nothing to change.
+mute and power are handled by the microcontroller before any filter sees them,
+so there is nothing to change. Channel up and down are offered where the filters
+name `WebOS.Key_webOS_ChannelUp` and `ChannelDown` (appLaunch.js does on an
+OLED48C56LB, webOS 10.3.0), or else where the TV's WebOS module
+(`/usr/lib/qt5/qml/WebOS/Global/libwebosglobalplugin.so`) defines those names:
+a B8 (webOS 4.4) has them there though its filters name no channel key. A key
+that is set is accepted by the filter, so LG's channel change no longer happens
+for it. On webOS 11 the filters do not carry
+them, offering them through `lib/guidepatch` instead (see below).
 
 The compositor reloads only on a change of the key's value: configd says
 nothing to a subscriber when the same list is written again. When an update
@@ -988,8 +995,8 @@ is gone, so there is no JavaScript to put first; the old configd key is still
 there, read by nothing. `remotekeys.js` takes this path where the KeyFilters
 directory names no keys and configd has `keyFiltersCpp`.
 
-LG's launch library reads what a key does from two values, and takes up a
-change to either at once with nothing reloaded:
+LG's launch library reads what a key does from two values at every press, so a
+change applies at once with nothing reloaded:
 
 - **Streaming buttons and Apps**: the settings service's `other.mapping_info`,
   a list of `{ name: { app_id, launch_param, isActive } }` that LG's server
@@ -1021,15 +1028,7 @@ end. Not every write is announced: around one switch off and on LG wrote nine
 times, five of them unannounced, the last a minute after the TV came on. So
 each change of power state is also followed by checks 3 s, 15 s, 1, 3 and 10
 minutes after it, and the server checks at its start and every 30 minutes,
-writing nothing while all is in place. After a wake from standby, though, a
-list that reads as set is not always the one LG's launch library acts on: on a
-C6 (webOS 11, 43.11.77) a Netflix button set to **Nothing** opened Netflix
-after some hours off, with `mapping_info` still saying Nothing, until the
-button was changed and changed back ([#1671](https://github.com/rorygallagher2024/glasshouse/issues/1671)).
-So each check after a wake writes the list twice even where it reads as set:
-the buttons Glasshouse holds with `launch_param` changed, then as they should
-be. Both are changes, which the library takes up, and a button set to
-**Nothing** stays off in both. The microcontroller's copy is not changed, so a streaming
+writing nothing while all is in place. The microcontroller's copy is not changed, so a streaming
 button pressed to switch the TV on opens LG's app.
 `tvwebctl restore-keys` writes LG's values back and deletes both files. The
 other keys Glasshouse offers elsewhere (Input, the color keys, Search, Info) are

@@ -36,9 +36,15 @@
  *
  * A key is offered only where this TV's own filter files name it, since LG's
  * key names differ by model and region (a C5 has a Disney+ button, a CX does
- * not). Home, Back, volume, mute, channel and power are not offered: the first
- * two are what the dashboard's own controls depend on, and the rest the
- * microcontroller handles before any filter sees them.
+ * not). Home, Back, volume, mute and power are not offered: the first two are
+ * what the dashboard's own controls depend on, and the rest the microcontroller
+ * handles before any filter sees them. The channel keys are offered where a
+ * filter names them (appLaunch.js does on an OLED48C56LB, webOS 10.3.0); a key
+ * that is set is accepted by the filter, so only As LG has it keeps LG's channel
+ * change. Where no filter names them, as on a B8 (webOS 4.4), the TV's WebOS
+ * module defining them is enough (fromPlugin). On webOS 11 they are offered
+ * through lib/guidepatch (blockCode) instead, since the native filters do not
+ * carry them.
  *
  * Home: earlier builds of Glasshouse Home pointed it at their own app, kept
  * beside the keys as `home`; lib/home.js clears it. Glasshouse Home now runs
@@ -52,8 +58,8 @@
  * webOS 11 (a C5 on 11.2.0) has a Weston compositor whose key filters are
  * native libraries, named by com.webos.surfacemanager.keyFiltersCpp: there is
  * no KeyFilters directory and no JavaScript to put first. LG's launch library
- * reads what a key does from two of LG's own values and takes up a change there
- * at once, though after a wake it can act on a list of its own (nudgedList): the streaming buttons and Apps from the settings
+ * reads what a key does at each press from two of LG's own values, so a change
+ * there applies at once: the streaming buttons and Apps from the settings
  * service's other.mapping_info, a list of { name: { app_id, launch_param,
  * isActive } } that LG's server sends, Guide and Home Hub from the configd
  * values com.webos.keyaction.*, and the ? button from LG's custom button
@@ -265,11 +271,16 @@ var KEYS = [
   { key: 'ai', title: 'AI', nativeOnly: true, turnsOffVoice: true },
   { key: 'multikey', title: '? button', nativeOnly: true, noNothing: true },
   { key: 'multikeyhold', title: '? button, held', nativeOnly: true, noNothing: true },
-  // The channel rocker, on webOS 11 where lib/guidepatch knows LG's first key
-  // filter: it is told to take the key (blockCode, the Linux key code), and the
+  // The channel rocker. On webOS 10 and below the JavaScript key filter names
+  // it (symbol), where a key that is set is accepted and so no longer changes
+  // the channel. On webOS 11 the filter does not carry it; lib/guidepatch has
+  // LG's first key filter take the key (blockCode, the Linux key code) and the
   // press is answered from that filter's own log line (KEY_EVENT).
-  { key: 'channelup', title: 'Channel up', nativeOnly: true, blockCode: 402 },
-  { key: 'channeldown', title: 'Channel down', nativeOnly: true, blockCode: 403 },
+  // fromPlugin: offered too where LG's filters leave the key out but the
+  // TV's WebOS module defines it, as on a B8 (webOS 4.4), whose filters name
+  // no channel key though every LG remote has them.
+  { key: 'channelup', symbol: 'WebOS.Key_webOS_ChannelUp', title: 'Channel up', blockCode: 402, fromPlugin: true },
+  { key: 'channeldown', symbol: 'WebOS.Key_webOS_ChannelDown', title: 'Channel down', blockCode: 403, fromPlugin: true },
   { key: 'guide', symbol: 'WebOS.Key_webOS_TVGuide', title: 'Guide' },
   { key: 'input', symbol: 'WebOS.Key_webOS_InputSource', title: 'Input' },
   { key: 'livetv', symbol: 'WebOS.Key_webOS_InputTV', title: 'TV' },
@@ -305,6 +316,10 @@ function barAvailable() { return !!barAppFn && barAllowedFn(); }
 var inputNames = null;
 var stateDir = '/var/lib/tvweb';
 var filtersDir = LG_FILTERS_DIR;
+// The QML module that defines WebOS.Key_webOS_*, for keys LG's own filters do
+// not name (fromPlugin).
+var WEBOS_PLUGIN = '/usr/lib/qt5/qml/WebOS/Global/libwebosglobalplugin.so';
+var webosPlugin = WEBOS_PLUGIN;
 var tvKeys = null;      // the symbols this TV's filters name, read once
 var nativeFilters = null; // whether configd names native filters, once answered
 var switcherFound = null; // whether the TV has INPUT_SWITCHER, once answered
@@ -338,6 +353,7 @@ function init(opts) {
     exec: opts.guideExec, mounts: opts.guideMounts, mountInfo: opts.guideMountInfo, luna: lunaFn,
     profileOverrideDir: opts.profileOverrideDir, profileWaitMs: opts.profileWaitMs, profilePollMs: opts.profilePollMs });
   filtersDir = opts.filtersDir || LG_FILTERS_DIR;
+  webosPlugin = opts.webosPlugin || WEBOS_PLUGIN;
   tvKeys = null;
   nativeFilters = null;
   switcherFound = null;
@@ -356,7 +372,6 @@ function init(opts) {
   muteToastsMs = opts.muteToastsMs || 0;
   powerTimers.forEach(function (t) { clearTimeout(t); });
   powerTimers = [];
-  lastPowerState = null;
   powerRechecksMs = opts.powerRechecksMs || POWER_RECHECKS_MS;
   if (lunaFn && fs.existsSync(toastsMarker())) unmuteToasts();
 }
@@ -393,8 +408,18 @@ function keysOnTv() {
     return null;
   }
   var hasColor = KEYS.some(function (k) { return k.color && src.indexOf(k.symbol) !== -1; });
+  var plugin = null;
+  // Whether the WebOS module defines a key's name, read once and only if needed.
+  function inPlugin(symbol) {
+    if (plugin === null) {
+      try { plugin = fs.readFileSync(webosPlugin).toString('binary'); } catch (e) { plugin = ''; }
+    }
+    return plugin.indexOf(symbol.replace(/^WebOS\./, '') + '\u0000') !== -1;
+  }
   tvKeys = KEYS.filter(function (k) {
-    return !k.nativeOnly && !k.nativeMapping && ((k.color && hasColor) || src.indexOf(k.symbol) !== -1);
+    if (k.nativeOnly || k.nativeMapping) return false;
+    if ((k.color && hasColor) || src.indexOf(k.symbol) !== -1) return true;
+    return !!k.fromPlugin && inPlugin(k.symbol);
   });
   return tvKeys;
 }
@@ -1131,8 +1156,8 @@ function reconcile(name, current, wanted, saved, written) {
  * cb(ok, wrote).
  */
 var applyQueue = [];
-function applyNative(cb, mapOverride, refresh) {
-  applyQueue.push({ cb: cb, map: mapOverride, refresh: !!refresh });
+function applyNative(cb, mapOverride) {
+  applyQueue.push({ cb: cb, map: mapOverride });
   if (applyQueue.length === 1) applyNext();
 }
 
@@ -1143,7 +1168,7 @@ function applyNext() {
     applyQueue.shift();
     applyNext();
     job.cb(ok, !!wrote);
-  }, job.map, job.refresh);
+  }, job.map);
 }
 
 /*
@@ -1152,46 +1177,21 @@ function applyNext() {
  * restarts the compositor once, and again when one is set back. Where it
  * cannot be, or Glasshouse Home has no guide, the Guide key is left to LG.
  */
-function applyNativeNow(cb, mapOverride, refresh) {
+function applyNativeNow(cb, mapOverride) {
   var map = mapOverride || readMap();
   var wantGuide = map.guide === HOME_GUIDE && homeGuideOn();
   var rest = {};
   Object.keys(map).forEach(function (k) { if (map[k] !== HOME_GUIDE) rest[k] = map[k]; });
   var st = guidePatch.status();
-  if (!st.supported && !st.bar && !st.channel) return applyNativeMap(cb, rest, refresh);
+  if (!st.supported && !st.bar && !st.channel) return applyNativeMap(cb, rest);
   var want = { guide: st.supported && wantGuide, input: st.supported && guidePatch.validId(map.input) ? map.input : '',
     bar: st.bar && !mapOverride && homeBarLauncherFn(), blocked: st.channel ? blockedCodes(map) : [] };
   guidePatch.apply(want, function (r) {
     if (!r.ok) console.log('remotekeys: LG\'s key handler could not be changed: ' + r.error);
     if (r.restarted) compositorRestartedFn();
     if (r.ok && want.guide) rest.guide = HOME_GUIDE;
-    applyNativeMap(cb, rest, refresh);
+    applyNativeMap(cb, rest);
   });
-}
-
-/*
- * After a wake, LG's launch library can act on a list of its own rather than
- * the one the settings service holds: on a C6 (webOS 11, 43.11.77) a Netflix
- * button set to Nothing opened Netflix after some hours in standby, though
- * mapping_info still said Nothing, until the key was changed and changed back
- * (#1671). So the list is written twice: each button Glasshouse holds with its
- * launch_param changed, then as it should be, both changes the library is told
- * of. A button set to Nothing stays off in both. The list as first written, or
- * null where Glasshouse holds none of its buttons.
- */
-function nudgedList(list, lg) {
-  var held = false;
-  var out = copyValue(list);
-  (out || []).forEach(function (entry) {
-    Object.keys(entry || {}).forEach(function (name) {
-      if (!Object.prototype.hasOwnProperty.call(lg.mappingWritten, name)) return;
-      var e = entry[name];
-      if (!e || typeof e !== 'object') return;
-      e.launch_param = e.launch_param === null ? '' : null;
-      held = true;
-    });
-  });
-  return held ? out : null;
 }
 
 // The key codes LG's filter is to take: the channel keys set to anything, Nothing included.
@@ -1200,7 +1200,7 @@ function blockedCodes(map) {
     .map(function (k) { return k.blockCode; });
 }
 
-function applyNativeMap(cb, map, refresh) {
+function applyNativeMap(cb, map) {
   var lg = readLg();
   if (!Object.keys(map).length && !lgHolds(lg)) {
     watchLg(false);
@@ -1215,14 +1215,13 @@ function applyNativeMap(cb, map, refresh) {
     (nextList || []).forEach(function (entry) {
       Object.keys(entry || {}).forEach(function (name) {
         var def = keyByName(name);
-        if (!def || def.nativeOnly || NATIVE_ACTIONS[name]) return;
+        if (!def || def.nativeOnly || def.blockCode || NATIVE_ACTIONS[name]) return;
         var v = reconcile(name, entry[name], function (lgEntry) { return mappingWanted(map, name, lgEntry); },
           lg.mapping, lg.mappingWritten);
         if (v !== undefined) { entry[name] = v; listChanged = true; }
       });
     });
     if (listChanged) settings[MAPPING_KEY] = nextList;
-    var nudged = refresh && !listChanged ? nudgedList(nextList, lg) : null;
     Object.keys(NATIVE_SETTINGS).forEach(function (key) {
       var name = NATIVE_SETTINGS[key];
       if (!tv.settings || !tv.settings[name]) return;
@@ -1260,20 +1259,6 @@ function applyNativeMap(cb, map, refresh) {
       if (!Object.keys(configs).length) return finish(true);
       lunaFn('com.webos.service.config/setConfigs', { configs: configs }, function (r) { finish(!!(r && r.returnValue)); });
     };
-    if (nudged) {
-      // Both writes are changes, so LG's launch library takes the list up again.
-      var both = {};
-      both[MAPPING_KEY] = nudged;
-      return writeSettings(both, function (ok) {
-        if (!ok) return cb(false, false);
-        settings[MAPPING_KEY] = nextList;
-        writeSettings(settings, function (ok2) {
-          if (!ok2) return cb(false, true);
-          refreshed = true;
-          writeActions();
-        });
-      });
-    }
     if (!Object.keys(settings).length) return writeActions();
     writeSettings(settings, function (ok) {
       if (!ok) return cb(false, wrote);
@@ -2131,31 +2116,14 @@ function moveLegacyHome() {
 var POWER_RECHECKS_MS = [3000, 15000, 60000, 180000, 600000];
 var powerRechecksMs = POWER_RECHECKS_MS;
 var powerTimers = [];
-var lastPowerState = null;
-// Set when a write after a wake has gone through, for its one log line.
-var refreshed = false;
 
-/*
- * state: the TV's power state now. Coming back on from standby, each check
- * writes the streaming buttons again even where they read as they should
- * (nudgedList).
- */
-function powerChanged(state) {
-  var woke = state === 'Active' && !!lastPowerState && lastPowerState !== 'Active' && lastPowerState !== 'Screen Saver';
-  if (state) lastPowerState = state;
+function powerChanged() {
   powerTimers.forEach(function (t) { clearTimeout(t); });
-  var logged = false;
   powerTimers = powerRechecksMs.map(function (ms) {
     return setTimeout(function () {
-      refreshed = false;
       recheckNative(function (ok, wrote) {
-        if (refreshed && !logged) {
-          logged = true;
-          console.log('remotekeys: streaming buttons written again after the wake' + (ok ? '' : ', and the TV did not take it'));
-        } else if (wrote && !refreshed) {
-          console.log('remotekeys: LG put its keys back at a power change; set again' + (ok ? '' : ', and the TV did not take it'));
-        }
-      }, woke);
+        if (wrote) console.log('remotekeys: LG put its keys back at a power change; set again' + (ok ? '' : ', and the TV did not take it'));
+      });
     }, ms);
   });
 }
@@ -2167,12 +2135,12 @@ function powerChanged(state) {
  * Glasshouse's own. cb(ok).
  */
 var RECHECK_MS = 30 * 60 * 1000;
-function recheckNative(cb, refresh) {
+function recheckNative(cb) {
   cb = cb || function () {};
   if (!lunaFn || keysOnTv()) return cb(false);
   hasNativeFilters(function (yes) {
     if (!yes) return cb(false);
-    applyNative(cb, undefined, refresh);
+    applyNative(cb);
   });
 }
 

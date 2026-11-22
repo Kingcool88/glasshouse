@@ -1116,7 +1116,7 @@
   <div class="ss-level-row" id="ss-news-row" hidden>
     <div class="ss-level-lbl" data-t="home.news.feeds">News feeds</div>
     <div class="ss-leagues-box">
-      <div class="sub" data-t="home.news.feedsDesc">The address of each feed, and a name to show before its headlines if you want another than the feed's own. Each is read every 10 minutes while the strip or the News screen saver shows. The News screen saver reads the same feeds.</div>
+      <div class="sub home-info-note" data-t="home.news.feedsDesc">Up to three RSS or Atom feeds, each read every 10 minutes while the strip or the News screen saver shows. The strip and the News screen saver use the same feeds.</div>
       <div id="ss-news-feeds"></div>
     </div>
   </div>
@@ -1316,6 +1316,15 @@
   <div class="apps-grp" id="apps-grp-bg">
     <div class="apps-grp-h" data-t="apps.group.bg">Background</div>
     <div class="pv-sub apps-grp-d" data-t="apps.group.bg.desc">What the TV runs without being asked. Switching some of it off frees memory.</div>
+
+    <details class="pv-d" id="disc-running-apps" ontoggle="if(this.open)loadApps()">
+      <summary><span data-t="apps.running.title">Apps in memory</span> <span class="cur" id="apps-running-summary"></span></summary>
+      <div class="pv-sub" data-t="apps.running.desc">Apps currently open or loaded in memory on the TV. Closing an app stops its process and frees its memory right away.</div>
+      <div id="apps-running-actions" style="display:none; margin-top:12px;">
+        <button type="button" class="pill bad" id="btn-close-all-running" onclick="closeAllRunningApps()" data-t="apps.running.closeAll">Close all</button>
+      </div>
+      <div class="prot-table catalog-grid" id="apps-running-list" style="margin-top:14px"></div>
+    </details>
 
     <details class="pv-d" id="disc-preload" hidden>
       <summary><span data-t="apps.preload">Apps kept ready in the background</span> <span class="cur" id="apps-preload-summary"></span></summary>
@@ -1698,28 +1707,33 @@
           <span class="ss-li-count num" id="home-info-count"></span>
         </div>
         <div class="ss-li-add">
-          <input type="text" id="home-info-add" list="home-info-entities" autocomplete="off" spellcheck="false"
-            aria-describedby="home-info-add-hint home-info-msg"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();homeInfoAdd();}">
+          <div class="ss-ent-wrap">
+            <input type="text" id="home-info-add" autocomplete="off" spellcheck="false"
+              aria-describedby="home-info-add-hint home-info-msg" aria-expanded="false"
+              oninput="homeInfoFilter()"
+              onkeydown="if(!haPickerKeydown(event,'home:info')&&event.key==='Enter'){event.preventDefault();homeInfoAdd();}">
+            <button type="button" class="ss-ent-btn" id="home-info-pick-btn" title="Choose entity" data-t-title="ss.chooseEntity" aria-label="Choose entity" data-t-aria-label="ss.chooseEntity" onclick="homeInfoTogglePicker()">&#9662;</button>
+            <div class="ss-pick-list ss-ha-list ha-picker" id="home-info-picker" hidden></div>
+          </div>
           <button type="button" class="ss-li-add-btn" id="home-info-add-btn" onclick="homeInfoAdd()" data-t="ss.entityList.addBtn">Add</button>
         </div>
         <div class="home-info-hint" id="home-info-add-hint"></div>
         <div class="home-info-msg" id="home-info-msg" role="status" aria-live="polite"></div>
       </div>
       <div id="home-info-lines"></div>
-      <datalist id="home-info-entities"></datalist>
     </div>
     <div class="prot-row home-gh-row" id="home-board-row" hidden>
       <div class="prot-main">
-        <div class="prot-title" data-t="home.board">Board</div>
-        <div class="prot-desc" data-t="home.boardDesc">Beside the lines: a list Home Assistant sends, such as today's matches from a sports integration, four lines at a time.</div>
+        <div class="prot-title" data-t="home.board">Home Assistant: board</div>
+        <div class="prot-desc" data-t="home.boardDesc">For Home Assistant users: a titled list an automation sends, such as today's matches from a sports integration, shown beside the clock on Glasshouse Home four lines at a time.</div>
       </div>
-      <div class="prot-status"><select class="pill-sel" id="home-board-sel" onchange="homeBoardSource(this.value)" aria-label="Board" data-t-aria-label="home.board">
+      <div class="prot-status"><select class="pill-sel" id="home-board-sel" onchange="homeBoardSource(this.value)" aria-label="Home Assistant: board" data-t-aria-label="home.board">
         <option value="off" data-t="common.off">Off</option>
-        <option value="ha" data-t="home.board.fromHa">Sent from Home Assistant</option>
+        <option value="ha" data-t="home.board.fromHa">Sent by an automation</option>
       </select></div>
     </div>
     <div class="home-info-panel" id="home-board-panel" hidden>
+      <div class="sub" data-t="home.board.haDesc">An automation sends the board to the TV's Home Board Push entity: a title and up to twenty lines, each with a label and a value. Glasshouse fetches nothing for it. The Home Assistant guide has an example.</div>
       <div class="home-crests-row">
         <label for="home-board-place" data-t="home.board.place">Shown</label>
         <select class="pill-sel" id="home-board-place" onchange="homeBoardStrip(this.value === 'strip')">
@@ -1740,7 +1754,7 @@
       </select></div>
     </div>
     <div class="home-info-panel" id="home-news-panel" hidden>
-      <div class="sub" data-t="home.news.feedsDesc">The address of each feed, and a name to show before its headlines if you want another than the feed's own. Each is read every 10 minutes while the strip or the News screen saver shows. The News screen saver reads the same feeds.</div>
+      <div class="sub home-info-note" data-t="home.news.feedsDesc">Up to three RSS or Atom feeds, each read every 10 minutes while the strip or the News screen saver shows. The strip and the News screen saver use the same feeds.</div>
       <div id="home-news-feeds"></div>
       <div class="home-crests-row">
         <label for="home-news-style" data-t="home.news.style">Headlines</label>
@@ -2488,6 +2502,13 @@
       </div>
       <div class="prot-row">
         <div class="prot-main">
+          <div class="prot-title" data-t="server.askOnTv">Ask on the TV</div>
+          <div class="prot-desc" data-t="server.askOnTv.desc">When the daily check finds a new release, asks on the TV whether to install it, with Update now and Later, the next time the picture is on. Each release is asked about until it is answered.</div>
+        </div>
+        <div class="prot-status"><button type="button" class="pill idle" id="upd-asktv" onclick="toggleAskOnTv()">&mdash;</button></div>
+      </div>
+      <div class="prot-row">
+        <div class="prot-main">
           <div class="prot-title" data-t="server.updatePopup">Update pop-up</div>
           <div class="prot-desc" data-t="server.updatePopup.desc">Shows a pop-up in this browser when a newer version is out, with a button to install it. Off until switched on here.</div>
         </div>
@@ -2917,6 +2938,7 @@
 <script src="/assets/ui/apps.js"></script>
 <script src="/assets/ui/install.js"></script>
 <script src="/assets/ui/inputs.js"></script>
+<script src="/assets/ui/ha-picker.js"></script>
 <script src="/assets/ui/home.js"></script>
 <script src="/assets/ui/iptv.js"></script>
 <script src="/assets/ui/tvchannels.js"></script>
