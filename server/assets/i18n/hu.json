@@ -3839,5 +3839,7 @@
  "home.news.style": {"from": "Headlines", "text": "Hírek"},
  "home.news.style.flip": {"from": "One at a time", "text": "Egyenként"},
  "home.news.style.scroll": {"from": "Running", "text": "Futó"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Egyenként minden hírt 8 vagy 6 másodpercig mutat, majd átúszik a következőbe. A futó jobbról balra mozgatja őket, kevésbé simán azokon a tévéken, amelyek nem rajzolnak meg minden képkockát. Mindkettő vonatkozik a szalagban lévő mérkőzésekre és a News képernyővédőre is."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Egyenként minden hírt 8 vagy 6 másodpercig mutat, majd átúszik a következőbe. A futó jobbról balra mozgatja őket, kevésbé simán azokon a tévéken, amelyek nem rajzolnak meg minden képkockát. Mindkettő vonatkozik a szalagban lévő mérkőzésekre és a News képernyővédőre is."},
+ "srv.ask.yes": {"from": "Yes", "text": "Igen"},
+ "srv.ask.no": {"from": "No", "text": "Nem"}
 }

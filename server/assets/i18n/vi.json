@@ -3842,5 +3842,7 @@
  "home.news.style": {"from": "Headlines", "text": "Tiêu đề"},
  "home.news.style.flip": {"from": "One at a time", "text": "Từng cái một"},
  "home.news.style.scroll": {"from": "Running", "text": "Chạy"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Từng cái một hiển thị mỗi tiêu đề trong 8 hoặc 6 giây rồi chuyển mờ sang tiêu đề tiếp theo. Chạy di chuyển chúng từ phải sang trái, kém mượt hơn trên những TV không vẽ kịp mọi khung hình. Cả hai đều áp dụng cho các trận trong dải và trình bảo vệ màn hình News."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Từng cái một hiển thị mỗi tiêu đề trong 8 hoặc 6 giây rồi chuyển mờ sang tiêu đề tiếp theo. Chạy di chuyển chúng từ phải sang trái, kém mượt hơn trên những TV không vẽ kịp mọi khung hình. Cả hai đều áp dụng cho các trận trong dải và trình bảo vệ màn hình News."},
+ "srv.ask.yes": {"from": "Yes", "text": "Có"},
+ "srv.ask.no": {"from": "No", "text": "Không"}
 }

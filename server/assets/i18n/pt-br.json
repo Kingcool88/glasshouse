@@ -3825,5 +3825,7 @@
  "home.news.style": {"from": "Headlines", "text": "Manchetes"},
  "home.news.style.flip": {"from": "One at a time", "text": "Uma de cada vez"},
  "home.news.style.scroll": {"from": "Running", "text": "Passando"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Uma de cada vez mostra cada manchete por 8 ou 6 segundos e passa para a próxima com uma transição. Passando as move da direita para a esquerda, com menos fluidez em TVs que não desenham todos os quadros. Ambos valem também para os jogos na faixa e para o protetor de tela News."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Uma de cada vez mostra cada manchete por 8 ou 6 segundos e passa para a próxima com uma transição. Passando as move da direita para a esquerda, com menos fluidez em TVs que não desenham todos os quadros. Ambos valem também para os jogos na faixa e para o protetor de tela News."},
+ "srv.ask.yes": {"from": "Yes", "text": "Sim"},
+ "srv.ask.no": {"from": "No", "text": "Não"}
 }

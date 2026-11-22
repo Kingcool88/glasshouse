@@ -1136,5 +1136,7 @@
  "home.board.halfTime": {"from": "HT", "text": "HZ"},
  "home.board.none": {"from": "No matches today", "text": "Heute keine Spiele"},
  "home.board.postponed": {"from": "Postponed", "text": "Verschoben"},
- "home.board.scoresTitle": {"from": "Today’s matches", "text": "Spiele heute"}
+ "home.board.scoresTitle": {"from": "Today’s matches", "text": "Spiele heute"},
+ "srv.ask.yes": {"from": "Yes", "text": "Ja"},
+ "srv.ask.no": {"from": "No", "text": "Nein"}
 }

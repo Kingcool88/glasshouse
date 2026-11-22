@@ -3825,5 +3825,7 @@
  "home.news.style": {"from": "Headlines", "text": "Titulares"},
  "home.news.style.flip": {"from": "One at a time", "text": "De uno en uno"},
  "home.news.style.scroll": {"from": "Running", "text": "En movimiento"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "De uno en uno muestra cada titular 8 o 6 segundos y se funde con el siguiente. En movimiento los desplaza de derecha a izquierda, con menos fluidez en televisores que no pueden dibujar cada fotograma. Ambos se aplican también a los partidos de la cinta y al salvapantallas News."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "De uno en uno muestra cada titular 8 o 6 segundos y se funde con el siguiente. En movimiento los desplaza de derecha a izquierda, con menos fluidez en televisores que no pueden dibujar cada fotograma. Ambos se aplican también a los partidos de la cinta y al salvapantallas News."},
+ "srv.ask.yes": {"from": "Yes", "text": "Sí"},
+ "srv.ask.no": {"from": "No", "text": "No"}
 }

@@ -3842,5 +3842,7 @@
  "home.news.style": {"from": "Headlines", "text": "Rubriker"},
  "home.news.style.flip": {"from": "One at a time", "text": "En i taget"},
  "home.news.style.scroll": {"from": "Running", "text": "Rullande"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "En i taget visar varje rubrik i 8 eller 6 sekunder och tonar sedan över till nästa. Rullande flyttar dem från höger till vänster, mindre jämnt på TV-apparater som inte hinner rita varje bildruta. Båda gäller även matcherna i remsan och News-skärmsläckaren."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "En i taget visar varje rubrik i 8 eller 6 sekunder och tonar sedan över till nästa. Rullande flyttar dem från höger till vänster, mindre jämnt på TV-apparater som inte hinner rita varje bildruta. Båda gäller även matcherna i remsan och News-skärmsläckaren."},
+ "srv.ask.yes": {"from": "Yes", "text": "Ja"},
+ "srv.ask.no": {"from": "No", "text": "Nej"}
 }

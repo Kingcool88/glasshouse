@@ -3843,5 +3843,7 @@
  "home.news.style": {"from": "Headlines", "text": "Nagłówki"},
  "home.news.style.flip": {"from": "One at a time", "text": "Po jednym"},
  "home.news.style.scroll": {"from": "Running", "text": "Przewijane"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Po jednym pokazuje każdy nagłówek przez 8 lub 6 sekund i przechodzi płynnie do następnego. Przewijane przesuwa je od prawej do lewej, mniej płynnie na telewizorach, które nie rysują każdej klatki. Oba dotyczą też meczów w pasku i wygaszacza News."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Po jednym pokazuje każdy nagłówek przez 8 lub 6 sekund i przechodzi płynnie do następnego. Przewijane przesuwa je od prawej do lewej, mniej płynnie na telewizorach, które nie rysują każdej klatki. Oba dotyczą też meczów w pasku i wygaszacza News."},
+ "srv.ask.yes": {"from": "Yes", "text": "Tak"},
+ "srv.ask.no": {"from": "No", "text": "Nie"}
 }

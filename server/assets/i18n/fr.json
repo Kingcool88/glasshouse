@@ -3825,5 +3825,7 @@
  "home.news.style": {"from": "Headlines", "text": "Titres"},
  "home.news.style.flip": {"from": "One at a time", "text": "Un à la fois"},
  "home.news.style.scroll": {"from": "Running", "text": "Défilement"},
- "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Un à la fois affiche chaque titre 8 ou 6 secondes, puis passe au suivant en fondu. Le défilement les fait glisser de droite à gauche, moins fluide sur les téléviseurs qui ne dessinent pas chaque image. Les deux s'appliquent aussi aux matchs du bandeau et à l'économiseur d'écran News."}
+ "home.news.speedDesc2": {"from": "One at a time shows each headline for 8 or 6 seconds, and fades to the next. Running moves them right to left, less smoothly on TVs that cannot draw every frame. Both apply to the matches in the strip and to the News screen saver too.", "text": "Un à la fois affiche chaque titre 8 ou 6 secondes, puis passe au suivant en fondu. Le défilement les fait glisser de droite à gauche, moins fluide sur les téléviseurs qui ne dessinent pas chaque image. Les deux s'appliquent aussi aux matchs du bandeau et à l'économiseur d'écran News."},
+ "srv.ask.yes": {"from": "Yes", "text": "Oui"},
+ "srv.ask.no": {"from": "No", "text": "Non"}
 }
