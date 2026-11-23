@@ -3790,6 +3790,8 @@
  "home.info.nameHint": {"text": "اختياري. يحل محل اسم الكيان نفسه.", "from": "Optional. Replaces the entity's own name."},
  "home.info.attributeHint": {"text": "اختياري. سمة مثل next_date تظهر بدلًا من الحالة.", "from": "Optional. An attribute such as next_date, shown instead of the state."},
  "home.info.beforeHint": {"text": "اختياري. كلمات قبل القيمة، مثل «يُجمع».", "from": "Optional. Words in front of the value, such as collected."},
+ "home.info.changeLabel": {"text": "التغيّر", "from": "Change"},
+ "home.info.changeHint": {"text": "اختياري. سمة رقمية مثل regularMarketChangePercent، تظهر بعد القيمة بالأخضر عند الارتفاع وبالأحمر عند الانخفاض.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"text": "اكتب كيانًا أو اختره أولًا.", "from": "Type or pick an entity first."},
  "home.info.noSuchEntity": {"text": "لا يوجد في Home Assistant كيان باسم {entity}.", "from": "Home Assistant has no entity called {entity}."},
  "home.info.added": {"text": "أُضيف {name} كسطر {n}.", "from": "Added {name} as line {n}."},

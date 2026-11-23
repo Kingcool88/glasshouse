@@ -573,6 +573,7 @@ Up to four lines of your own after the weather, or before the clock in the Alter
   * **Name:** shown in place of the entity's own name.
   * **Attribute:** one of its attributes in place of its state, such as `next_date` for a bin collection whose state is text.
   * **Text before:** a few words put in front of the value, such as *collected* or *arrives*, so a date reads *collected tomorrow*.
+  * **Change:** an attribute holding a number, shown after the value with its sign, in green above zero and red below, such as `regularMarketChangePercent` for a share's move today. An attribute whose name says it is a percentage (it contains *percent*, or ends in *pct*) shows with a %. A line whose attribute is missing or not a number shows without it.
 
   Under each line, **Shows as** gives how it reads beside the clock.
 
@@ -585,6 +586,7 @@ Up to four lines of your own after the weather, or before the clock in the Alter
   | `sensor.bin_collection` (a bin's next collection) | `next_date` | Bin 1 | collected | *Bin 1 · collected on Wednesday* |
   | `sensor.postnord_delivery_12345` (PostNord) | `next_delivery` | PostNord | arrives | *PostNord · arrives tomorrow* |
   | `sensor.yahoofinance_visc_st` (Yahoo Finance) | | Viscaria | | *Viscaria · 14.58 SEK* |
+  | `sensor.yahoofinance_visc_st`, **Change** `regularMarketChangePercent` | | Viscaria | | *Viscaria · 15.40 SEK +5.6 %*, the change in green |
   | `sensor.outdoor_temperature` | | Outside | | *Outside · 3.4 °C* |
 
   To find an attribute, open the entity in Home Assistant's **Developer tools → States**: its attributes are listed beside its state. An attribute shows without the entity's unit, which belongs to its state.

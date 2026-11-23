@@ -3804,6 +3804,8 @@
  "home.info.nameHint": {"text": "Необязательно. Заменяет собственное имя объекта.", "from": "Optional. Replaces the entity's own name."},
  "home.info.attributeHint": {"text": "Необязательно. Атрибут, например next_date, вместо состояния.", "from": "Optional. An attribute such as next_date, shown instead of the state."},
  "home.info.beforeHint": {"text": "Необязательно. Слова перед значением, например «вывоз».", "from": "Optional. Words in front of the value, such as collected."},
+ "home.info.changeLabel": {"text": "Изменение", "from": "Change"},
+ "home.info.changeHint": {"text": "Необязательно. Числовой атрибут, например regularMarketChangePercent, показывается после значения: зелёным при росте и красным при падении.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"text": "Сначала введите или выберите объект.", "from": "Type or pick an entity first."},
  "home.info.noSuchEntity": {"text": "В Home Assistant нет объекта {entity}.", "from": "Home Assistant has no entity called {entity}."},
  "home.info.added": {"text": "{name} добавлен строкой {n}.", "from": "Added {name} as line {n}."},

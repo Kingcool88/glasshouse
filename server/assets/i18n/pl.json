@@ -3808,6 +3808,8 @@
  "home.info.nameHint": {"text": "Opcjonalne. Zastępuje własną nazwę encji.", "from": "Optional. Replaces the entity's own name."},
  "home.info.attributeHint": {"text": "Opcjonalne. Atrybut, np. next_date, pokazywany zamiast stanu.", "from": "Optional. An attribute such as next_date, shown instead of the state."},
  "home.info.beforeHint": {"text": "Opcjonalne. Słowa przed wartością, np. odbiór.", "from": "Optional. Words in front of the value, such as collected."},
+ "home.info.changeLabel": {"text": "Zmiana", "from": "Change"},
+ "home.info.changeHint": {"text": "Opcjonalne. Atrybut liczbowy, np. regularMarketChangePercent, pokazywany po wartości na zielono przy wzroście i na czerwono przy spadku.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"text": "Najpierw wpisz lub wybierz encję.", "from": "Type or pick an entity first."},
  "home.info.noSuchEntity": {"text": "Home Assistant nie ma encji o nazwie {entity}.", "from": "Home Assistant has no entity called {entity}."},
  "home.info.added": {"text": "Dodano {name} jako wiersz {n}.", "from": "Added {name} as line {n}."},

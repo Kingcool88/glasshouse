@@ -1378,7 +1378,9 @@ function homeInfoDraw() {
     const own = (hit && hit.name) || l.entity;
     // How the line reads beside the clock, with a made-up value.
     const value = l.attribute ? t('home.info.tomorrow', 'tomorrow') : '…' + (hit && hit.unit ? ' ' + hit.unit : '');
-    const shown = (l.label || own) + ' · ' + (l.before ? l.before + ' ' : '') + value;
+    // A change reads +1.2 % in green, or −1.2 % in red, after the value.
+    const change = l.change ? ' ' + (/percent|pct$/i.test(l.change) ? '+1.2 %' : '+1.20') : '';
+    const shown = (l.label || own) + ' · ' + (l.before ? l.before + ' ' : '') + value + change;
     html += `
       <div class="ss-li-item">
         <div class="ss-li-top">
@@ -1393,11 +1395,12 @@ function homeInfoDraw() {
             <button type="button" title="${esc(t('ss.entityList.remove', 'Remove'))}" aria-label="${esc(t('ss.entityList.remove', 'Remove'))}" ${dis} onclick="homeInfoRemove(${i})">&times;</button>
           </div>
         </div>
-        <details class="home-info-more"${l.label || l.attribute || l.before ? ' open' : ''}>
+        <details class="home-info-more"${l.label || l.attribute || l.before || l.change ? ' open' : ''}>
         <summary>${esc(t('home.info.customise', 'Customise'))}</summary>
         ${field(i, 'label', t('home.info.name', 'Name'), l.label, 32, t('home.info.nameHint', 'Optional. Replaces the entity\'s own name.'))}
         ${field(i, 'attribute', t('home.info.attributeLabel', 'Attribute'), l.attribute, 64, t('home.info.attributeHint', 'Optional. An attribute such as next_date, shown instead of the state.'))}
         ${field(i, 'before', t('home.info.beforeLabel', 'Text before'), l.before, 24, t('home.info.beforeHint', 'Optional. Words in front of the value, such as collected.'))}
+        ${field(i, 'change', t('home.info.changeLabel', 'Change'), l.change, 64, t('home.info.changeHint', 'Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down.'))}
         </details>
         <div class="home-info-preview">${esc(t('home.info.preview', 'Shows as: {line}', { line: shown }))}</div>
       </div>`;
@@ -1432,7 +1435,7 @@ function homeInfoAdd() {
   }
   if (lines.length >= HOME_INFO_SLOTS) return;
   haPickerCloseAll();
-  lines.push({ entity, attribute: '', label: '', before: '' });
+  lines.push({ entity, attribute: '', label: '', before: '', change: '' });
   input.value = '';
   homeInfoCommit(lines);
   const hit = haEntityLookup(entity) || (homeHaList ? homeHaList.entities.find(e => e.id === entity) : null);

@@ -3806,6 +3806,8 @@
  "home.info.nameHint": {"text": "Tùy chọn. Thay cho tên riêng của thực thể.", "from": "Optional. Replaces the entity's own name."},
  "home.info.attributeHint": {"text": "Tùy chọn. Một thuộc tính như next_date, hiển thị thay cho trạng thái.", "from": "Optional. An attribute such as next_date, shown instead of the state."},
  "home.info.beforeHint": {"text": "Tùy chọn. Những chữ đặt trước giá trị, như thu gom.", "from": "Optional. Words in front of the value, such as collected."},
+ "home.info.changeLabel": {"text": "Thay đổi", "from": "Change"},
+ "home.info.changeHint": {"text": "Tùy chọn. Một thuộc tính dạng số như regularMarketChangePercent, hiện sau giá trị, màu xanh lá khi tăng và màu đỏ khi giảm.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"text": "Hãy nhập hoặc chọn một thực thể trước.", "from": "Type or pick an entity first."},
  "home.info.noSuchEntity": {"text": "Home Assistant không có thực thể nào tên {entity}.", "from": "Home Assistant has no entity called {entity}."},
  "home.info.added": {"text": "Đã thêm {name} làm dòng {n}.", "from": "Added {name} as line {n}."},

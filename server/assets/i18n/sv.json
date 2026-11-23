@@ -3806,6 +3806,8 @@
  "home.info.nameHint": {"text": "Valfritt. Ersätter entitetens eget namn.", "from": "Optional. Replaces the entity's own name."},
  "home.info.attributeHint": {"text": "Valfritt. Ett attribut som next_date, som visas i stället för tillståndet.", "from": "Optional. An attribute such as next_date, shown instead of the state."},
  "home.info.beforeHint": {"text": "Valfritt. Ord framför värdet, till exempel hämtas.", "from": "Optional. Words in front of the value, such as collected."},
+ "home.info.changeLabel": {"text": "Förändring", "from": "Change"},
+ "home.info.changeHint": {"text": "Valfritt. Ett attribut med ett tal, till exempel regularMarketChangePercent, som visas efter värdet i grönt vid uppgång och rött vid nedgång.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"text": "Skriv eller välj en entitet först.", "from": "Type or pick an entity first."},
  "home.info.noSuchEntity": {"text": "Home Assistant har ingen entitet som heter {entity}.", "from": "Home Assistant has no entity called {entity}."},
  "home.info.added": {"text": "{name} har lagts till som rad {n}.", "from": "Added {name} as line {n}."},

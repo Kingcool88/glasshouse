@@ -2063,7 +2063,7 @@ var ENTITY_INFO_MS = 30000;
 var INFO_ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 /** @type {typeof import('./haentity')} */
 var haEntityModule = null;
-var entityInfo = null;     // [{ icon, label, before, v, unit }] as last read
+var entityInfo = null;     // [{ icon, label, before, v, unit, change?, changePct? }] as last read
 var entityInfoAt = 0;
 var entityInfoReading = false;
 // Whether the MQTT bridge is set up, so lines can be sent from Home Assistant.
@@ -2076,11 +2076,16 @@ function infoLinesOf(raw) {
     var entity = String(l.entity || '').trim().toLowerCase();
     if (!INFO_ENTITY_RE.test(entity)) return;
     var attribute = homeInfoText(l.attribute, 64).replace(/[^A-Za-z0-9_]/g, '');
+    var change = homeInfoText(l.change, 64).replace(/[^A-Za-z0-9_]/g, '');
     out.push({ entity: entity, attribute: attribute, label: homeInfoText(l.label, HOME_INFO_LABEL_MAX),
-               before: homeInfoText(l.before, 24) });
+               before: homeInfoText(l.before, 24), change: change });
   });
   return out;
 }
+
+// An attribute named for a percentage (regularMarketChangePercent, change_pct)
+// is shown with a % after it; any other change as its plain number.
+var INFO_PERCENT_RE = /percent|pct$/i;
 
 // An icon for an entity without its own, from what it measures.
 var INFO_CLASS_ICONS = { battery: 'battery', temperature: 'thermometer', timestamp: 'calendar', date: 'calendar',
@@ -2090,13 +2095,26 @@ function entityLine(cfgLine, read) {
   var attrs = read ? read.attributes || {} : {};
   var raw = !read ? null : cfgLine.attribute ? attrs[cfgLine.attribute] : read.state;
   if (raw !== null && raw !== undefined && typeof raw === 'object') raw = null;
-  return {
+  var line = {
     icon: homeInfoIcon(attrs.icon) || INFO_CLASS_ICONS[attrs.device_class] || '',
     label: cfgLine.label || homeInfoText(attrs.friendly_name, HOME_INFO_LABEL_MAX) || cfgLine.entity,
     before: cfgLine.before,
     v: raw === null || raw === undefined ? '' : homeInfoText(raw, HOME_INFO_VALUE_MAX),
     unit: cfgLine.attribute ? '' : homeInfoText(attrs.unit_of_measurement, 12)
   };
+  // The change beside the value, such as a share's move today: a number the
+  // view shows signed, green above zero and red below. Left out where the
+  // attribute is missing or not a number, so the line shows as before.
+  if (cfgLine.change) {
+    var changeRaw = attrs[cfgLine.change];
+    var change = typeof changeRaw === 'number' ? changeRaw
+      : typeof changeRaw === 'string' && /^\s*[-+]?\d+(\.\d+)?\s*$/.test(changeRaw) ? parseFloat(changeRaw) : NaN;
+    if (isFinite(change)) {
+      line.change = change;
+      line.changePct = INFO_PERCENT_RE.test(cfgLine.change);
+    }
+  }
+  return line;
 }
 
 function refreshEntityInfo() {

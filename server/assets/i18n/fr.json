@@ -3790,6 +3790,8 @@
  "home.info.nameHint": {"from": "Optional. Replaces the entity's own name.", "text": "Facultatif. Remplace le nom de l’entité."},
  "home.info.attributeHint": {"from": "Optional. An attribute such as next_date, shown instead of the state.", "text": "Facultatif. Un attribut comme next_date, affiché à la place de l’état."},
  "home.info.beforeHint": {"from": "Optional. Words in front of the value, such as collected.", "text": "Facultatif. Des mots devant la valeur, comme collecte."},
+ "home.info.changeLabel": {"text": "Variation", "from": "Change"},
+ "home.info.changeHint": {"text": "Facultatif. Un attribut numérique comme regularMarketChangePercent, affiché après la valeur en vert à la hausse et en rouge à la baisse.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"from": "Type or pick an entity first.", "text": "Saisissez ou choisissez d’abord une entité."},
  "home.info.noSuchEntity": {"from": "Home Assistant has no entity called {entity}.", "text": "Home Assistant n’a pas d’entité nommée {entity}."},
  "home.info.added": {"from": "Added {name} as line {n}.", "text": "{name} ajouté en ligne {n}."},

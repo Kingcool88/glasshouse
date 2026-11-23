@@ -210,6 +210,10 @@ html.resting #wall .layer{-webkit-animation-play-state:paused;animation-play-sta
 .info-line svg{-webkit-flex:0 0 auto;flex:0 0 auto;width:28px;height:28px;margin-right:12px}
 .info-label{color:#a39d93;margin-right:12px;overflow:hidden;text-overflow:ellipsis}
 .info-value{-webkit-flex:0 0 auto;flex:0 0 auto}
+/* A change beside the value, such as a share's move today: green up, red down. */
+.info-change{-webkit-flex:0 0 auto;flex:0 0 auto;margin-left:10px}
+.info-change.up{color:#5fd38d}
+.info-change.down{color:#ff7a6e}
 .alternative #info{-webkit-order:2;order:2;margin:0 48px 0 0}
 /* The board (text.lg_tv_home_board): a title and four of its lines at a
    time, turning to the next four every few seconds. */
@@ -2149,13 +2153,31 @@ html[lang="vi"] #srcTitle,html[lang="vi"] #plMode,html[lang="vi"] #pvMode,html[l
     }
     return (l.before ? l.before + ' ' : '') + text;
   }
+  /*
+   * A line's change, read from the attribute chosen for it: signed, with two
+   * decimals at most, and a % where the attribute is a percentage. Green
+   * above zero, red below, plain at zero. Empty where the line has none.
+   */
+  function infoChangeHtml(l) {
+    if (typeof l.change !== 'number' || !isFinite(l.change)) return '';
+    var lang = (window.I18N && I18N.lang) ? I18N.lang() : 'en';
+    var loc = lang === 'en' ? 'en-GB' : lang;
+    var places = l.changePct ? 1 : 2;
+    var size = Math.abs(l.change);
+    var text;
+    try { text = size.toLocaleString(loc, { minimumFractionDigits: places, maximumFractionDigits: places }); } catch (e) { text = size.toFixed(places); }
+    // A minus sign, not a hyphen, so it lines up with the plus.
+    text = (l.change > 0 ? '+' : l.change < 0 ? '−' : '') + text + (l.changePct ? ' %' : '');
+    var kind = l.change > 0 ? ' up' : l.change < 0 ? ' down' : '';
+    return '<span class="info-change' + kind + '">' + esc(text) + '</span>';
+  }
   function infoLinesHtml(lines, from, to) {
     var html = '';
     for (var i = from; i < to && i < lines.length; i++) {
       var l = lines[i];
       html += '<div class="info-line">' + (l.icon ? infoIcon(l.icon) : '') +
         (l.label ? '<span class="info-label">' + esc(l.label) + '</span>' : '') +
-        '<span class="info-value">' + esc(infoValue(l)) + '</span></div>';
+        '<span class="info-value">' + esc(infoValue(l)) + '</span>' + infoChangeHtml(l) + '</div>';
     }
     return html;
   }

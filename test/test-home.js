@@ -3699,6 +3699,41 @@ step('lines from entities chosen on the dashboard are read through Home Assistan
   });
 });
 
+step('a line read from an entity can show a change from one of its attributes, a percentage when the attribute is one', function (done) {
+  var answer = {
+    'sensor.visc': { state: '15.4', attributes: { friendly_name: 'Viscaria', unit_of_measurement: 'SEK',
+      regularMarketChangePercent: 5.62, regularMarketChange: '-0.82', marketState: 'POSTPOST' } }
+  };
+  var ha = {
+    configured: function () { return true; },
+    readMany: function (ids, cb) {
+      var out = {};
+      ids.forEach(function (id) { if (answer[id]) out[id] = answer[id]; });
+      cb({ ok: true, entities: out, errors: {} });
+    }
+  };
+  start(null, { haEntity: ha });
+  home.setLayout({ infoLines: [
+    { entity: 'sensor.visc', change: 'regularMarketChangePercent' },
+    { entity: 'sensor.visc', change: 'regularMarketChange' },
+    { entity: 'sensor.visc', change: 'marketState' },
+    { entity: 'sensor.visc', change: 'no such attribute!' }
+  ] }, function (r) {
+    assert.strictEqual(r.layout.infoLines[3].change, 'nosuchattribute', 'only letters, digits and _ kept');
+    home.info(function () {
+      var lines = home.beat().info;
+      assert.strictEqual(lines[0].change, 5.62);
+      assert.strictEqual(lines[0].changePct, true, 'a percentage by its name');
+      assert.strictEqual(lines[0].v, '15.4', 'the value as before');
+      assert.strictEqual(lines[1].change, -0.82, 'a number sent as text read as one');
+      assert.strictEqual(lines[1].changePct, false);
+      assert.strictEqual('change' in lines[2], false, 'text is no change');
+      assert.strictEqual('change' in lines[3], false, 'nor is a missing attribute');
+      done();
+    });
+  });
+});
+
 step('the board: off unless chosen, or a board Home Assistant pushes while MQTT is set up', function (done) {
   var clock = Date.now();
   var mqtt = true;

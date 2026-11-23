@@ -3804,6 +3804,8 @@
  "home.info.nameHint": {"text": "Nem kötelező. Az entitás saját nevét váltja fel.", "from": "Optional. Replaces the entity's own name."},
  "home.info.attributeHint": {"text": "Nem kötelező. Egy tulajdonság, például next_date, az állapot helyett.", "from": "Optional. An attribute such as next_date, shown instead of the state."},
  "home.info.beforeHint": {"text": "Nem kötelező. Szavak az érték előtt, például ürítés.", "from": "Optional. Words in front of the value, such as collected."},
+ "home.info.changeLabel": {"text": "Változás", "from": "Change"},
+ "home.info.changeHint": {"text": "Nem kötelező. Egy számot tartalmazó attribútum, például regularMarketChangePercent, az érték után zölden, ha emelkedik, és pirosan, ha csökken.", "from": "Optional. A number attribute such as regularMarketChangePercent, shown after the value in green when up and red when down."},
  "home.info.needEntity": {"text": "Először írjon be vagy válasszon egy entitást.", "from": "Type or pick an entity first."},
  "home.info.noSuchEntity": {"text": "A Home Assistantben nincs {entity} nevű entitás.", "from": "Home Assistant has no entity called {entity}."},
  "home.info.added": {"text": "{name} hozzáadva {n}. sorként.", "from": "Added {name} as line {n}."},
