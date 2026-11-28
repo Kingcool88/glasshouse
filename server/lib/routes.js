@@ -143,6 +143,8 @@ var ntpModule = null;
 var historyModule = null;
 var perfHistoryModule = null;
 var barPressModule = null;
+// The palmbus switch's state and report links (palmbusInfo in tvweb.js).
+var palmbusInfoFn = null;
 var storageScanModule = null;
 /** @type {typeof import('./sysinfo')} */
 var sysinfoModule = null;
@@ -940,6 +942,7 @@ function updateSummary() {
   s.allowNetworkDebugger = !!(config && config.allowNetworkDebugger);
   s.allowTileHiding = !!(appsModule && appsModule.tileHidingAllowed && appsModule.tileHidingAllowed());
   s.allowExperimentalScreensavers = !!(screensaversModule && screensaversModule.allowedAnyway && screensaversModule.allowedAnyway());
+  s.palmbus = palmbusInfoFn ? palmbusInfoFn() : null;
   s.pointer = {
     supported: !!(pointerModule && pointerModule.isSupported()),
     enabled: !!(pointerModule && pointerModule.isEnabled()),
@@ -2422,6 +2425,15 @@ function handleRequest(req, res) {
     barPressModule.closed(String(u.query.app || ''), Number(u.query.press));
     return send(res, 200, JSON.stringify({ ok: true }));
   }
+  // The key filter's Brightness keys: a step made here, as the compositor's own call cannot read the level on webOS 4 (#1815). The TV only.
+  if (pathname === '/api/remotekeys/brightness' && req.method === 'POST' && remoteKeysModule) {
+    if (!fromTV(req)) return send(res, 403, JSON.stringify({ ok: false, error: 'from the TV only' }));
+    return readJsonBody(req, res, function (body) {
+      remoteKeysModule.brightnessFromFilter(body && body.delta, body && body.from, function (r) {
+        send(res, r && r.ok ? 200 : 502, JSON.stringify(r || { ok: false }));
+      });
+    });
+  }
   // The key filter's Ambient light key: PicCap toggled here, as the dashboard does. The TV only.
   if (pathname === '/api/remotekeys/piccap' && req.method === 'POST' && remoteKeysModule) {
     if (!fromTV(req)) return send(res, 403, JSON.stringify({ ok: false, error: 'from the TV only' }));
@@ -2433,7 +2445,7 @@ function handleRequest(req, res) {
       return send(res, 403, JSON.stringify({ ok: false, error: msg('srv.controlsOff', 'controls disabled in config') }));
     }
     return readJsonBody(req, res, function (body) {
-      haBarModule.act(body && body.id, body && body.action, body && body.value, function (r) {
+      haBarModule.act(body && body.id, body && body.action, body && body.value, body && body.prevState, function (r) {
         send(res, r && r.ok ? 200 : 502, JSON.stringify(r || { ok: false, error: 'failed' }));
       });
     });
@@ -3351,6 +3363,7 @@ function init(opts) {
   if (opts.history) historyModule = opts.history;
   if (opts.perfHistory) perfHistoryModule = opts.perfHistory;
   if (opts.barPress) barPressModule = opts.barPress;
+  if (typeof opts.palmbus === 'function') palmbusInfoFn = opts.palmbus;
   if (opts.storageScan) storageScanModule = opts.storageScan;
   if (opts.sysinfo) sysinfoModule = opts.sysinfo;
   if (opts.screenColour) screenColourModule = opts.screenColour;
