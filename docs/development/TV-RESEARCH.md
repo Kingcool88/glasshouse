@@ -4242,3 +4242,22 @@ On an OLED77C64LA (webOS 11.1, firmware 43.11.77) with a Formuler Z11 Pro Max on
 - **What closes it:** network input's `sendKeyCode` with 412 (LG's Back) 2 s after the launch closed the banner and the remote worked on the box at once. The same 412 with no banner up went to the box as one step back. Evdev's 158 did not close it.
 - **Logs:** the app's own lines (`I_UICTRL`, `FR01_2_INBA_SHOW_LAUNCH`) were not written to `/var/log/messages` though its PmLog context was at info, and the TV has no journal, so when the banner goes cannot be read.
 - **Capture:** `com.webos.service.capture/executeOneShot` on this TV included the HDMI picture under the banner, where webOS 5 and later had captured black on other TVs.
+
+## Stored calibration files (rooted LG OLED)
+
+A 1D LUT, 3D LUT, 3x3 gamut matrix or enable flag written to the picture
+service is stored in `/mnt/lg/cmn_data/external_pqldb/<mode>_<profileN>_<RECORD>`
+(for example `hdr_filmMaker_profile0_...`). Sizes: the 1D file is 3072
+little-endian 16-bit values (6144 bytes); the 3D file is 33 x 33 x 33 x 3 of
+them (215622 bytes).
+
+* This is the stored state. A write sent with `dataOpt` 0 stays in RAM and does
+  not appear in these files.
+* The file follows the picture mode a calibration session was started in, not
+  the mode on screen.
+* `getTemporalPeakControl` and `getGlobalStressReduction` report the stored
+  switch, not the live panel value.
+
+Not yet confirmed on a TV: that a stored upload changes the file each time.
+The prefix is the mode name for SDR (`filmMaker`) and snake case for HDR
+(`hdr_cinema`, while the app sends `hdrCinema`).

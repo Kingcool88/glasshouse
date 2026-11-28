@@ -4090,5 +4090,9 @@
  "pic.mode.gallery": {"from": "Gallery", "text": "Galleri"},
  "srv.remoteKeys.glasshouseHome": {"from": "Glasshouse Home", "text": "Glasshouse Home"},
  "srv.remoteKeys.lgHome": {"from": "LG's Home", "text": "LG:s Home"},
- "srv.remoteKeys.dashboard": {"from": "Glasshouse dashboard", "text": "Glasshouse-dashboarden"}
+ "srv.remoteKeys.dashboard": {"from": "Glasshouse dashboard", "text": "Glasshouse-dashboarden"},
+ "oled.slots": {"from": "Stored calibration files", "text": "Sparade kalibreringsfiler"},
+ "oled.slots.note": {"from": "Stored state, read from the files on the TV. A calibration write that is not saved stays in memory and does not show here, and each file belongs to the picture mode a calibration was started in, not the mode on screen.", "text": "Sparat tillstånd, läst från filerna på TV:n. En kalibreringsskrivning som inte sparas stannar i minnet och visas inte här, och varje fil hör till det bildläge där kalibreringen startades, inte läget på skärmen."},
+ "oled.slots.size": {"from": "{n} bytes", "text": "{n} byte"},
+ "oled.slots.badSize": {"from": "unexpected size", "text": "oväntad storlek"}
 }
