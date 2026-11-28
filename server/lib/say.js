@@ -24,6 +24,8 @@ var DISPLAY_FIELDS = {
   title: 1, badge: 1, message: 1, hint: 1, limitTrackingLabel: 1, limitTrackingDetail: 1,
   // A Home Assistant tile's reading and the line under it (lib/habar.js).
   valueText: 1, subText: 1,
+  // What an Ask on the TV progress card says once done (lib/ask.js progress).
+  doneText: 1,
   // Lists of the names above, which a page joins into a sentence.
   sharesWith: 1, agreements: 1, kept: 1, cautions: 1,
   // [id, title, note] rows: only the strings msg() made are changed, never an id.
