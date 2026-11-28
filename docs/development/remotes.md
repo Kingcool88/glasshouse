@@ -6,6 +6,7 @@ The LG remotes Glasshouse knows, with the Remote tab keys each is known to have.
 
 | Remote | Year | Reported by the TV as | Keys known | List complete |
 | :----- | :--- | :-------------------- | ---------: | :------------ |
+| [Magic Remote MR26GC](#mr26gc) | not known | `LGE MR26GC` | 15 | yes |
 | [Magic Remote MR25GA](#mr25ga) | not known | `LGE MR25GA` | 15 | yes |
 | [Magic Remote MR23](#mr23) | not known | `LGE MR23` | 17 | yes |
 | [Magic Remote MR22N](#mr22n) | not known | `LGE MR22N` | 16 | yes |
@@ -17,6 +18,40 @@ How sure each fact is:
 * **Measured:** seen on a TV: a press read from the remote, or a filter that received it.
 * **Documented:** stated in LG's manual or in this project's docs.
 * **Assumed:** expected, not confirmed.
+
+## Magic Remote MR26GC
+
+<a id="mr26gc"></a>
+
+Reported by the TV as `LGE MR26GC` (measured). Has no number keys. The list of keys below is every button the remote has.
+
+| Remote tab key | Evidence |
+| :------------- | :------- |
+| Netflix (`netflix`) | measured |
+| Prime Video (`amazon`) | measured |
+| Disney+ (`disneyplus`) | measured |
+| Stan (`stan`) | measured |
+| LG Channels (`lgchannels`) | measured |
+| YouTube (`youtube`) | measured |
+| Channel up (`channelup`) | measured |
+| Channel down (`channeldown`) | measured |
+| Guide (`guide`) | measured |
+| Microphone (`voice`) | measured |
+| Home Hub (`homehub`) | measured |
+| ? button (`multikey`) | measured |
+| 123 button (`screenremote`) | measured |
+| AI (`ai`) | documented |
+| ? button, held (`multikeyhold`) | assumed |
+
+Every button in the owner's photos of the remote was pressed, and the owner confirmed on 27 November 2026 that the photos show every button it has.
+
+Where this comes from:
+
+* OLED48C6PSA (Australia), webOS 11.2.0, firmware 43.21.68, 27 November 2026 (#1738): the remote, labelled MR26GC (MODEL: LGMR1), reported by the TV as LGE MR26GC on the Metrics tab and in every lginput2 press; each button pressed once and read from lginput2's NL_BUTTON_CLICK lines in /var/log/messages: ? (KEY_MULTIKEY), the house in a circle (KEY_HOMEDASHBOARD), Guide (KEY_GUIDE), the microphone (KEY_VOICE), 123 (KEY_SCREEN_REMOTE), Netflix (KEY_NETFLIX), Prime Video (KEY_AMAZON), Disney+ (KEY_DISNEY), Stan (KEY_STAN), LG Channels (KEY_LGCHANNELS) and YouTube (KEY_YOUTUBE); CH+ and CH- (KEY_CHANNELUP, KEY_CHANNELDOWN) from NL_NON_LIST_BUTTON_CLICK; also Home, Settings, OK, Back, the arrows and volume, which the Remote tab does not offer
+* The same TV's other.mapping_info lists stan (stan.webos2) and youtube (youtube.leanback.v4) as active, which is what offers those two keys on webOS 11
+* Stan is IR_KEY_STAN (1119) in /usr/share/X11/xkb/keycodes/lg; the key table there has no YouTube key, though the button logs KEY_YOUTUBE
+* No number keys, no red, green, yellow or blue keys, and no side buttons; holding ? (multikeyhold) was not tried, and is assumed as on the MR25GA, whose ? sends the same code held
+* As for the MR25GA: the microphone arrives as the AI key (ai) on webOS 11's native mapping, which does not depend on the remote's model, rather than the microphone key (voice) that lginput2 logs
 
 ## Magic Remote MR25GA
 
