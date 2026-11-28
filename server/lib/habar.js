@@ -14,6 +14,7 @@
  * Strict ES5: runs on node 0.12.
  */
 var fs = require('fs');
+var crypto = require('crypto');
 var path = require('path');
 var luna = require('./luna');
 var runningApps = require('./running');
@@ -54,6 +55,22 @@ var sub = null, running = null, timer = null, failures = 0;
 
 function stateFile() { return path.join(stateDir, 'habar.json'); }
 
+/*
+ * The page the bar's app shows, as this server serves it, by a hash of its
+ * text. The app loads it once and a preloaded copy outlives a server
+ * restart, so the page compares this with what it first saw and loads
+ * itself again, out of sight, where they differ: after an update, and not
+ * after a watchdog restart, which serves the same page.
+ */
+var pageFile = path.join(__dirname, '..', 'assets', 'habar.html');
+var pageHash = null;
+function pageVersion() {
+  if (pageHash === null) {
+    try { pageHash = crypto.createHash('sha1').update(fs.readFileSync(pageFile)).digest('hex').slice(0, 12); } catch (e) { pageHash = ''; }
+  }
+  return pageHash;
+}
+
 function listConfig() {
   var j = util.readJson(stateFile(), null);
   var raw = j && Array.isArray(j.entities) ? j.entities : [];
@@ -65,7 +82,9 @@ function listConfig() {
     if (!/^[a-z0-9_]+\.[a-z0-9_]+$/.test(id) || seen[id]) continue;
     seen[id] = true;
     var label = typeof item.label === 'string' ? item.label.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL) : '';
-    out.push({ id: id, label: label });
+    var entry = { id: id, label: label };
+    if (item.control === false) entry.control = false;
+    out.push(entry);
     if (out.length >= MAX_ENTITIES) break;
   }
   return { entities: out, showHints: !(j && j.showHints === false) };
@@ -81,11 +100,13 @@ function saveConfig(list, opts) {
     var raw = list[i];
     var id = '';
     var label = '';
+    var control = true;
     if (typeof raw === 'string') {
       id = raw.trim();
     } else if (raw && typeof raw === 'object') {
       id = String(raw.id || '').trim();
       label = typeof raw.label === 'string' ? raw.label.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL) : '';
+      control = raw.control !== false;
     } else {
       continue;
     }
@@ -98,7 +119,10 @@ function saveConfig(list, opts) {
       return { ok: false, error: msg('srv.habar.tooMany', 'too many entities (max {max})', { max: MAX_ENTITIES }) };
     }
     seen[id] = true;
-    out.push({ id: id, label: label });
+    // Kept only where control is withheld, so a list saved before stays as it was.
+    var entry = { id: id, label: label };
+    if (!control) entry.control = false;
+    out.push(entry);
   }
   try {
     if (!out.length) {
@@ -179,6 +203,7 @@ function init(opts) {
   if (typeof opts.hour12 === 'function') hour12Fn = opts.hour12;
   if (opts.Subscription) Subscription = opts.Subscription;
   if (opts.delaysMs) afterCloseMs = afterStartMs = afterSwitchOnMs = confirmRetryMs = opts.delaysMs;
+  if (opts.pageFile) { pageFile = opts.pageFile; pageHash = null; }
 }
 
 function lightSupportsBrightness(attrs) {
@@ -202,7 +227,22 @@ function formatTemp(n, unit) {
   return s + (unit || '°');
 }
 
+/*
+ * An entity whose control is switched off on the dashboard (control: false)
+ * shows here as a reading: OK and the steps do nothing and act() refuses it,
+ * so a child's TV can show the heating or a light without changing them.
+ */
 function formatTile(item, ent, err) {
+  var tile = tileFor(item, ent, err);
+  if (item && item.control === false) {
+    tile.readOnly = true;
+    tile.adjustable = false;
+    tile.viewOnly = true;
+  }
+  return tile;
+}
+
+function tileFor(item, ent, err) {
   var id = item.id;
   var domain = domainOf(id);
   var attrs = (ent && ent.attributes && typeof ent.attributes === 'object') ? ent.attributes : {};
@@ -357,7 +397,7 @@ function state(cb) {
   var list = cfg.entities;
   var configured = !!(haEntityFn && haEntityFn.configured());
   if (!configured || !list.length) {
-    return cb({ ok: true, configured: configured, hour12: !!hour12Fn(), showHints: cfg.showHints, refreshMs: REFRESH_MS, tiles: [] });
+    return cb({ ok: true, configured: configured, hour12: !!hour12Fn(), showHints: cfg.showHints, refreshMs: REFRESH_MS, page: pageVersion(), tiles: [] });
   }
   var ids = list.map(function (it) { return it.id; });
   haEntityFn.readMany(ids, function (r) {
@@ -366,7 +406,7 @@ function state(cb) {
     var tiles = list.map(function (it) {
       return formatTile(it, ents[it.id] || null, errs[it.id] || '');
     });
-    cb({ ok: true, configured: true, hour12: !!hour12Fn(), showHints: cfg.showHints, cached: cached(), refreshMs: refreshMs(), tiles: tiles });
+    cb({ ok: true, configured: true, hour12: !!hour12Fn(), showHints: cfg.showHints, cached: cached(), refreshMs: refreshMs(), page: pageVersion(), tiles: tiles });
   });
 }
 
@@ -406,6 +446,11 @@ function act(entityId, action, value, prevState, cb) {
   var item = findConfigured(String(entityId || ''));
   if (!item) {
     return cb({ ok: false, error: msg('srv.habar.notListed', 'entity is not on the Home Assistant bar') });
+  }
+  // Checked here, where every change made from the TV passes: the bar, Glasshouse
+  // Home's row, and a remote key stepping its tile.
+  if (item.control === false) {
+    return cb({ ok: false, error: msg('srv.habar.viewOnly', 'this entity can only be viewed on this TV') });
   }
   var domain = domainOf(item.id);
   var mode = String(action || 'toggle');
@@ -559,5 +604,6 @@ module.exports = {
   act: act,
   open: open,
   runningChanged: runningChanged,
+  pageVersion: pageVersion,
   APP: APP
 };

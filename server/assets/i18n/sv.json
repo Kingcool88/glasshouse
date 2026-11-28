@@ -3976,6 +3976,7 @@
  "srv.habar.openFailed": {"from": "Could not open the Home Assistant bar.", "text": "Det gick inte att öppna Home Assistant-fältet."},
  "srv.habar.readFailed": {"from": "could not read entity", "text": "det gick inte att läsa entiteten"},
  "srv.habar.readOnly": {"from": "{domain} is read-only", "text": "{domain} är skrivskyddad"},
+ "srv.habar.viewOnly": {"from": "this entity can only be viewed on this TV", "text": "den här entiteten kan bara visas på den här TV:n"},
  "srv.habar.serviceFailed": {"from": "Home Assistant service call failed", "text": "anrop till Home Assistant-tjänst misslyckades"},
  "srv.habar.tooMany": {"from": "too many entities (max {max})", "text": "för många entiteter (max {max})"},
  "srv.remoteKeys.haBar": {"from": "Home Assistant bar", "text": "Home Assistant-fältet"},
@@ -4031,6 +4032,9 @@
  "inputs.banner.closeDesc": {"from": "Switching to an HDMI input shows LG’s banner with its name for 5 seconds, and until it goes the remote does not reach the device. With this on, Glasshouse closes it 2 seconds in, so the remote works on the device straight away. Only for inputs with a device that the TV controls over HDMI-CEC (SIMPLINK).", "text": "När du byter till en HDMI-ingång visar LG en banner med dess namn i 5 sekunder, och tills den försvinner når fjärren inte enheten. Med detta på stänger Glasshouse den efter 2 sekunder, så att fjärren styr enheten direkt. Bara för ingångar med en enhet som TV:n styr via HDMI-CEC (SIMPLINK)."},
  "ha.bar.intro": {"from": "A row of Home Assistant controls over the picture, opened with a remote key: lights, switches, climate, fans, covers, locks, scenes and scripts.", "text": "Ett fält med Home Assistant-kontroller över bilden, som öppnas med en knapp på fjärren: lampor, strömbrytare, klimat, fläktar, persienner, lås, scener och skript."},
  "ha.bar.addOne": {"from": "Add an entity", "text": "Lägg till en entitet"},
+ "ha.bar.controlHint": {"from": "Control: clear it for an entity the TV should only show, without changing it.", "text": "Styrning: avmarkera den för en entitet som TV:n bara ska visa, utan att ändra den."},
+ "ha.bar.readOnly": {"from": "Read only", "text": "Skrivskyddad"},
+ "ha.bar.control": {"from": "Control", "text": "Styrning"},
  "ha.bar.keyHint": {"from": "To open it, set a key to Home Assistant bar on the", "text": "För att öppna det, ställ in en knapp på Home Assistant-fältet på fliken"},
  "ha.bar.hintsWhere": {"from": "Which remote buttons do what, above the control bar and on Glasshouse Home's Home Assistant row.", "text": "Vilka fjärrknappar som gör vad, ovanför kontrollfältet och på Glasshouse Homes Home Assistant-rad."},
  "ha.bar.homeNote": {"from": "Glasshouse Home can show these entities as a row, and Glasshouse Bar as a tile, both set on the", "text": "Glasshouse Home kan visa de här entiteterna som en rad, och Glasshouse Bar som en ruta, båda inställda på"},
@@ -4162,5 +4166,9 @@
  "srv.saver.video.loadFailed": {"from": "The browser could not load this video (media error {code}).", "text": "Webbläsaren kunde inte läsa in videon (mediafel {code})."},
  "srv.timers.badTime": {"from": "the time must be HH:MM, from 00:00 to 23:59", "text": "tiden måste anges som TT:MM, från 00:00 till 23:59"},
  "srv.timers.badDays": {"from": "days must be a list of 0 (Sunday) to 6 (Saturday)", "text": "dagarna måste vara en lista med 0 (söndag) till 6 (lördag)"},
- "srv.update.noRelease": {"from": "GitHub did not return a release", "text": "GitHub skickade ingen version"}
+ "srv.update.noRelease": {"from": "GitHub did not return a release", "text": "GitHub skickade ingen version"},
+ "oled.slots": {"from": "Stored calibration files", "text": "Sparade kalibreringsfiler"},
+ "oled.slots.note": {"from": "Stored state, read from the files on the TV. A calibration write that is not saved stays in memory and does not show here, and each file belongs to the picture mode a calibration was started in, not the mode on screen.", "text": "Sparat tillstånd, läst från filerna på TV:n. En kalibreringsskrivning som inte sparas stannar i minnet och visas inte här, och varje fil hör till det bildläge där kalibreringen startades, inte läget på skärmen."},
+ "oled.slots.size": {"from": "{n} bytes", "text": "{n} byte"},
+ "oled.slots.badSize": {"from": "unexpected size", "text": "oväntad storlek"}
 }

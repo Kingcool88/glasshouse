@@ -206,6 +206,7 @@ step(function (next) {
 
 // 8. A timeout renews the handle: a read waiting on the old one is made again, an action is not.
 step(function (next) {
+  require('../server/lib/palmbus').setKeepOnTimeout(false);
   bus.answers['com.webos.service.hangs/getIt'] = null;
   bus.delays = { 'com.webos.service.slow/getIt': 1800, 'com.webos.service.slow/launchIt': 1800 };
   var got = {};
@@ -224,6 +225,34 @@ step(function (next) {
     assert.strictEqual(sentTo('com.webos.service.slow/launchIt'), 0);
     bus.delays = {};
     console.log('  ✓ a timeout renews the handle; a read cut short is made again, an action is not');
+    next();
+  }, 9000);
+});
+
+// 8b. On Node 0.x the handle is kept, as unregistering it there aborts the
+// process: the calls waiting on it answer on it, and only the one that
+// timed out goes to luna-send.
+step(function (next) {
+  var palmbus = require('../server/lib/palmbus');
+  palmbus.setKeepOnTimeout(true);
+  bus.answers['com.webos.service.hangs2/getIt'] = null;
+  bus.delays = { 'com.webos.service.slow2/getIt': 1800, 'com.webos.service.slow2/launchIt': 1800 };
+  var got = {};
+  luna.call('com.webos.service.hangs2/getIt', {}, function (r) { got.hung = r && r.via; });
+  var handles = bus.handles;
+  setTimeout(function () {
+    luna.call('com.webos.service.slow2/getIt', {}, function (r) { got.read = r && r.via; });
+    luna.call('com.webos.service.slow2/launchIt', {}, function (r) { got.act = r && r.via; });
+  }, 500);
+  setTimeout(function () {
+    assert.strictEqual(bus.handles, handles, 'no new handle');
+    assert.strictEqual(got.hung, 'luna-send', 'the call that timed out went to luna-send');
+    assert.strictEqual(got.read, 'palmbus', 'a read waiting on the kept handle answered on it');
+    assert.strictEqual(got.act, 'palmbus', 'an action waiting on it answered too, not cut short');
+    assert.strictEqual(busTo('com.webos.service.slow2/launchIt'), 1);
+    bus.delays = {};
+    palmbus.setKeepOnTimeout(/^v0\./.test(process.version));
+    console.log('  ✓ on Node 0.x a timeout keeps the handle: calls waiting on it answer, only the one that timed out goes to luna-send');
     next();
   }, 9000);
 });
