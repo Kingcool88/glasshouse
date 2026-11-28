@@ -148,8 +148,14 @@ html,body{width:1920px;height:1080px;background:transparent;overflow:hidden;font
           // A server that knows nothing of the card: the new one, after the restart.
           return following.restarting ? endWith(following.doneText, SHOW_DONE_MS) : close();
         }
-        // No answer: restarting, or gone for longer than a restart takes.
-        if (Date.now() - following.since > (following.restarting ? RESTART_MAX_MS : 20000)) close();
+        // No answer: the server restarting, often too quickly for its own
+        // last step to be seen (4 s on an OLED65B8SLC). Once it answers
+        // again without the card, the new release is in.
+        if (!following.restarting) {
+          following.restarting = true;
+          document.body.className = 'on following waiting';
+        }
+        if (Date.now() - following.since > RESTART_MAX_MS) close();
       });
     }
     following.timer = setInterval(poll, CHECK_MS);
