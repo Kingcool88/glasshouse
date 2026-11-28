@@ -15,6 +15,20 @@ var waitFor = require('./wait-for').waitFor;
 
 console.log('Running test-habar.js ...');
 
+// The Home Assistant bar loads no translation file: its words come from the
+// server in the TV's menu language, English where there is no translation.
+(function () {
+  var say = require('../server/lib/say');
+  say.init(path.join(__dirname, '..', 'server', 'assets', 'i18n'));
+  var en = haBar.barText('');
+  assert.strictEqual(Object.keys(en).length, 15);
+  assert.strictEqual(en['habar.hint.close'], 'Back close');
+  assert.strictEqual(haBar.barText('en-GB')['habar.empty'], 'No entities on bar yet');
+  var ru = haBar.barText('ru-RU');
+  assert.ok(ru['habar.hint.close'] && ru['habar.hint.close'] !== 'Back close', 'Russian: ' + ru['habar.hint.close']);
+  console.log('  \u2713 the bar\'s words come in the TV\'s menu language, English where there is none');
+})();
+
 var dir = path.join(os.tmpdir(), 'habar-' + process.pid);
 fs.mkdirSync(dir);
 
@@ -62,10 +76,23 @@ var states = {
   'scene.movie': {
     state: 'scening',
     attributes: { friendly_name: 'Movie Time' }
+  },
+  // A light whose integration confirms a toggle only after a short real
+  // delay, as an MQTT round trip or a HomeKit bridge poll would (#1795).
+  'light.slow': {
+    state: 'on',
+    attributes: { friendly_name: 'Slow Lamp' }
+  },
+  // A light whose toggle is accepted but never confirmed: the retry must
+  // give up rather than wait forever.
+  'light.stuck': {
+    state: 'on',
+    attributes: { friendly_name: 'Stuck Lamp' }
   }
 };
 
 var serviceCalls = [];
+var reads = {};
 var server = http.createServer(function (req, res) {
   var chunks = [];
   req.on('data', function (c) { chunks.push(c); });
@@ -73,6 +100,7 @@ var server = http.createServer(function (req, res) {
     assert.strictEqual(req.headers.authorization, 'Bearer test-token');
     if (req.method === 'GET' && req.url.indexOf('/api/states/') === 0) {
       var id = decodeURIComponent(req.url.slice('/api/states/'.length));
+      reads[id] = (reads[id] || 0) + 1;
       var ent = states[id];
       if (!ent) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -104,7 +132,11 @@ var server = http.createServer(function (req, res) {
         states['lock.front'].state = parts[1] === 'unlock' ? 'unlocked' : 'locked';
       } else if (body.entity_id === 'cover.blinds') {
         states['cover.blinds'].state = parts[1] === 'close_cover' ? 'closed' : 'open';
+      } else if (body.entity_id === 'light.slow' && parts[1] === 'toggle') {
+        var slowTarget = states['light.slow'].state === 'on' ? 'off' : 'on';
+        setTimeout(function () { states['light.slow'].state = slowTarget; }, 25);
       }
+      // light.stuck: the call is accepted but the state never moves.
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify([]));
     }
@@ -122,7 +154,7 @@ server.listen(0, '127.0.0.1', function () {
   var port = server.address().port;
   haEntity.init({
     config: {
-      homeAssistant: { enabled: true, url: 'http://127.0.0.1:' + port, token: 'test-token' }
+      homeAssistant: { enabled: true, url: 'http://127.0.0.1:' + port, token: 'test-token', updateMode: 'polling' }
     }
   });
   haBar.init({
@@ -153,11 +185,13 @@ server.listen(0, '127.0.0.1', function () {
     { id: 'fan.bedroom', label: '' },
     { id: 'cover.blinds', label: '' },
     { id: 'lock.front', label: '' },
-    { id: 'scene.movie', label: '' }
+    { id: 'scene.movie', label: '' },
+    { id: 'light.slow', label: '' },
+    { id: 'light.stuck', label: '' }
   ]);
   assert.strictEqual(saved.ok, true);
   assert.strictEqual(saved.showHints, true);
-  assert.strictEqual(saved.entities.length, 7);
+  assert.strictEqual(saved.entities.length, 9);
   assert.strictEqual(haBar.listConfig().entities[0].label, 'Desk');
   assert.strictEqual(haBar.listConfig().showHints, true);
   assert.strictEqual(haBar.setOptions({ bad: true }).ok, false);
@@ -172,6 +206,39 @@ server.listen(0, '127.0.0.1', function () {
   assert.strictEqual(hintsOn.ok, true);
   assert.strictEqual(hintsOn.showHints, true);
   console.log('  \u2713 saveConfig validates, deduplicates, persists entities, and preserves showHints');
+
+  // Control withheld for an entity (a child's TV): kept as control: false and
+  // only then, shown as a reading, and refused before Home Assistant is asked.
+  var withheld = haBar.saveConfig([{ id: 'climate.living', label: '', control: false }, { id: 'light.desk', label: 'Desk', control: true }]);
+  assert.strictEqual(withheld.ok, true);
+  assert.deepEqual(haBar.listConfig().entities, [{ id: 'climate.living', label: '', control: false }, { id: 'light.desk', label: 'Desk' }],
+    'control is written only where it is withheld');
+  var heldTile = haBar.formatTile(haBar.listConfig().entities[0], { state: 'heat', attributes: { temperature: 21, hvac_modes: ['off', 'heat'] } }, '');
+  assert.strictEqual(heldTile.readOnly, true, 'a withheld entity is a reading');
+  assert.strictEqual(heldTile.adjustable, false, 'and has no steps');
+  assert.strictEqual(heldTile.viewOnly, true);
+  assert.strictEqual(heldTile.valueText, '21\u00b0 \u00b7 heat', 'its state still shows');
+  assert.strictEqual(haBar.formatTile(haBar.listConfig().entities[1], { state: 'on', attributes: { brightness: 128 } }, '').readOnly, false);
+  var callsBefore = serviceCalls.length, refused = null;
+  ['toggle', 'step'].forEach(function (action) {
+    haBar.act('climate.living', action, 1, function (r) { refused = r; });
+    assert.strictEqual(refused.ok, false, action + ' is refused');
+    assert.ok(/only be viewed/.test(refused.error), refused.error);
+  });
+  assert.strictEqual(serviceCalls.length, callsBefore, 'Home Assistant was not asked');
+  assert.strictEqual(haBar.saveConfig(saved.entities).ok, true);
+  console.log('  \u2713 an entity with control withheld shows as a reading and its changes are refused');
+
+  // The dashboard offers Control only where the bar can act: its list of
+  // domains has to match what formatTile treats as a reading.
+  var uiSrc = fs.readFileSync(path.join(__dirname, '..', 'server', 'assets', 'ui', 'habar.js'), 'utf8');
+  var controlled = JSON.parse(/HA_BAR_CONTROLLED = (\[[^\]]*\])/.exec(uiSrc)[1].replace(/'/g, '"'));
+  ['light', 'switch', 'input_boolean', 'fan', 'climate', 'cover', 'lock', 'scene', 'script', 'button', 'input_button',
+    'sensor', 'binary_sensor', 'weather', 'person', 'number', 'select', 'media_player', 'camera'].forEach(function (domain) {
+    var readOnly = haBar.formatTile({ id: domain + '.x', label: '' }, { state: 'on', attributes: {} }, '').readOnly;
+    assert.strictEqual(readOnly, controlled.indexOf(domain) === -1, domain + ': the dashboard and formatTile agree on control');
+  });
+  console.log('  \u2713 the dashboard offers Control only for the domains the bar acts on');
 
   // 2. Preload lifecycle
   haBar.start();
@@ -188,7 +255,13 @@ server.listen(0, '127.0.0.1', function () {
         assert.strictEqual(st.configured, true);
         assert.strictEqual(st.hour12, true);
         assert.strictEqual(st.showHints, true);
-        assert.strictEqual(st.tiles.length, 7);
+        assert.strictEqual(st.refreshMs, 5000, 'every ask reaches Home Assistant without a cache, so the bar keeps to 5 s');
+        assert.strictEqual(st.cached, false, 'Glasshouse Home\'s row keeps its own pace without a cache');
+        var served = require('crypto').createHash('sha1')
+          .update(fs.readFileSync(path.join(__dirname, '..', 'server', 'assets', 'habar.html'))).digest('hex').slice(0, 12);
+        assert.strictEqual(st.page, served, 'the state names the page served, for an older copy to notice');
+        assert.strictEqual(haBar.pageVersion(), served);
+        assert.strictEqual(st.tiles.length, 9);
         assert.strictEqual(st.tiles[0].label, 'Desk');
         assert.strictEqual(st.tiles[0].pct, 50);
         assert.strictEqual(st.tiles[0].adjustable, true);
@@ -247,14 +320,32 @@ server.listen(0, '127.0.0.1', function () {
                         assert.strictEqual(serviceCalls.some(function (c) { return c.domain === 'scene' && c.service === 'turn_on'; }), true);
                         console.log('  \u2713 act executes toggle and step safely across domains');
 
+                        // 7b. A toggle confirmed late (#1795): the tile waits for the state to
+                        // actually move away from what it was, not just one quick read.
+                        haBar.act('light.slow', 'toggle', null, 'on', function (rSlow) {
+                          assert.strictEqual(rSlow.ok, true);
+                          assert.strictEqual(rSlow.tile.active, false, 'the confirmed state is off, not the stale read');
+                          assert.ok(reads['light.slow'] > 1, 'more than one read was needed to see the change');
+
+                          // A toggle that never confirms still returns the service result,
+                          // bounded, rather than waiting forever.
+                          var stuckReadsBefore = reads['light.stuck'] || 0;
+                          haBar.act('light.stuck', 'toggle', null, 'on', function (rStuck) {
+                            assert.strictEqual(rStuck.ok, true);
+                            assert.strictEqual(rStuck.tile.active, true, 'still the last known state once retries are exhausted');
+                            assert.strictEqual(reads['light.stuck'] - stuckReadsBefore, 6, 'gave up after the initial read plus 5 retries');
+                            console.log('  \u2713 a late or missing state confirmation is retried, then bounded');
+
                         // 8. Backup part round-trip
                         backupParts.init({ habar: haBar });
                         var part = backupParts.PARTS.filter(function (p) { return p.id === 'haBar'; })[0];
                         assert.ok(part);
                         assert.strictEqual(part.valid([{ id: 'light.desk', label: 'Desk' }]), true);
                         assert.strictEqual(part.valid([{ id: 'bad' }]), false);
+                        assert.strictEqual(part.valid([{ id: 'light.desk', label: '', control: false }]), true, 'a backup keeps control withheld');
+                        assert.strictEqual(part.valid([{ id: 'light.desk', control: 'no' }]), false);
                         part.read(function (readEnts) {
-                          assert.strictEqual(readEnts.length, 7);
+                          assert.strictEqual(readEnts.length, 9);
                           part.write([{ id: 'switch.kettle', label: 'Tea' }], function (wr) {
                             assert.strictEqual(wr.ok, true);
                             assert.deepEqual(haBar.listConfig().entities, [{ id: 'switch.kettle', label: 'Tea' }]);
@@ -319,6 +410,8 @@ server.listen(0, '127.0.0.1', function () {
                           });
                         });
                       });
+                      });
+                    });
                     });
                   });
                 });

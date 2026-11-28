@@ -667,6 +667,12 @@
         They exist to protect the panel from burn-in, and switching them off makes
         permanent image retention more likely. Doing so may affect your warranty.
       </div>
+
+      <div id="oled-slots" hidden>
+        <div class="grp" data-t="oled.slots">Stored calibration files</div>
+        <div class="sub" data-t="oled.slots.note">Stored state, read from the files on the TV. A calibration write that is not saved stays in memory and does not show here, and each file belongs to the picture mode a calibration was started in, not the mode on screen.</div>
+        <div id="oled-slot-rows"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -1469,6 +1475,19 @@
       </div>
       <div class="pv-sub"><a href="https://rorygallagher2024.github.io/glasshouse/development/WRITING-NOSIGNAL/" target="_blank" rel="noopener" data-t="community.ns.docs">Writing a No Signal screen</a> &middot; <a href="https://github.com/rorygallagher2024/glasshouse-catalog" target="_blank" rel="noopener" data-t="community.submit">Submit to the catalog</a></div>
     </details>
+  </div>
+
+  <div class="tab-grp" id="inputs-grp-banner" hidden>
+    <div class="pv-sec" data-t="inputs.banner">Input banner</div>
+    <div class="prot-table">
+      <div class="prot-row">
+        <div class="prot-main">
+          <div class="prot-title" data-t="inputs.banner.close">Close the input banner at once</div>
+          <div class="prot-desc" data-t="inputs.banner.closeDesc">Switching to an HDMI input shows LG&rsquo;s banner with its name for 5 seconds, and until it goes the remote does not reach the device. With this on, Glasshouse closes it 2 seconds in, so the remote works on the device straight away. Only for inputs with a device that the TV controls over HDMI-CEC (SIMPLINK).</div>
+        </div>
+        <div class="prot-status"><button type="button" class="pill idle" id="btn_close_banner" onclick="toggleCloseBanner()">&mdash;</button></div>
+      </div>
+    </div>
   </div>
 
   <div class="pv-note" id="inputs-none" hidden data-t="inputs.none">Nothing about this TV&rsquo;s inputs can be changed from here.</div>
@@ -2626,6 +2645,7 @@
             <span class="ss-li-count num" id="ha-bar-count"></span>
           </div>
           <div class="ha-bar-list" id="ha-bar-list"></div>
+          <div class="pv-sub ha-bar-legend" id="ha-bar-legend" hidden><span class="ha-bar-legend-box" aria-hidden="true">&#10003;</span><span data-t="ha.bar.controlHint">Control: clear it for an entity the TV should only show, without changing it.</span></div>
         </div>
       </div>
     </div>
@@ -2849,6 +2869,15 @@
             <div class="prot-desc" data-t="server.experimental.homeLayout.short">Allows switching off parts of LG&rsquo;s Home screen on webOS 10, on the Home tab.</div>
           </div>
           <div class="prot-status"><button type="button" class="pill idle" id="exp-homelayout" onclick="toggleHomeLayoutAllowed('exp-homelayout')">&mdash;</button></div>
+        </div>
+        <div class="prot-row" id="exp-palmbus-row" hidden>
+          <div class="prot-main">
+            <div class="prot-title" data-t="server.experimental.palmbus">Faster, lighter communication with the TV</div>
+            <div class="prot-desc" data-t="server.experimental.palmbus.short">Glasshouse talks to the TV&rsquo;s own services without starting a separate process each time. It starts faster, uses less CPU and memory, and Home Assistant gets the TV&rsquo;s state sooner. Anything this TV doesn&rsquo;t allow is done the usual way automatically. Technically: LG&rsquo;s palmbus connection instead of a luna-send process per call.</div>
+            <div class="prot-desc" id="exp-palmbus-note"></div>
+            <div id="exp-palmbus-compat"></div>
+          </div>
+          <div class="prot-status"><button type="button" class="pill idle" id="exp-palmbus" onclick="toggleExpPalmbus()">&mdash;</button></div>
         </div>
         <div class="prot-row" id="exp-screensaver-row" hidden>
           <div class="prot-main">

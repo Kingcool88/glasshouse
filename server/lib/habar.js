@@ -14,11 +14,14 @@
  * Strict ES5: runs on node 0.12.
  */
 var fs = require('fs');
+var crypto = require('crypto');
 var path = require('path');
 var luna = require('./luna');
+var runningApps = require('./running');
 var barPress = require('./barpress');
 var util = require('./util');
-var msg = require('./say').msg;
+var say = require('./say');
+var msg = say.msg;
 
 var APP = 'com.tvweb.habar';
 var MAX_ENTITIES = 16;
@@ -27,7 +30,17 @@ var AFTER_CLOSE_MS = 1200;
 var AFTER_START_MS = 5000;
 var AFTER_SWITCH_ON_MS = 5000;
 var MAX_FAILURES = 5;
+var REFRESH_MS = 5000;
+var CACHED_REFRESH_MS = 1000;
+// A toggle's service call can return before Home Assistant's own state
+// catches up with the device (an MQTT round trip, a HomeKit bridge poll),
+// so a light already off on the TV screen can still read back as "on" for a
+// moment. Re-reading a few times, rather than once, waits for the state to
+// actually move away from what it was before acting, up to this cap.
+var CONFIRM_RETRY_MS = 400;
+var CONFIRM_RETRIES = 5;
 var afterCloseMs = AFTER_CLOSE_MS, afterStartMs = AFTER_START_MS, afterSwitchOnMs = AFTER_SWITCH_ON_MS;
+var confirmRetryMs = CONFIRM_RETRY_MS;
 
 var lunaFn = null;
 var stateDir = '/var/lib/tvweb';
@@ -42,6 +55,22 @@ var sub = null, running = null, timer = null, failures = 0;
 
 function stateFile() { return path.join(stateDir, 'habar.json'); }
 
+/*
+ * The page the bar's app shows, as this server serves it, by a hash of its
+ * text. The app loads it once and a preloaded copy outlives a server
+ * restart, so the page compares this with what it first saw and loads
+ * itself again, out of sight, where they differ: after an update, and not
+ * after a watchdog restart, which serves the same page.
+ */
+var pageFile = path.join(__dirname, '..', 'assets', 'habar.html');
+var pageHash = null;
+function pageVersion() {
+  if (pageHash === null) {
+    try { pageHash = crypto.createHash('sha1').update(fs.readFileSync(pageFile)).digest('hex').slice(0, 12); } catch (e) { pageHash = ''; }
+  }
+  return pageHash;
+}
+
 function listConfig() {
   var j = util.readJson(stateFile(), null);
   var raw = j && Array.isArray(j.entities) ? j.entities : [];
@@ -53,7 +82,9 @@ function listConfig() {
     if (!/^[a-z0-9_]+\.[a-z0-9_]+$/.test(id) || seen[id]) continue;
     seen[id] = true;
     var label = typeof item.label === 'string' ? item.label.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL) : '';
-    out.push({ id: id, label: label });
+    var entry = { id: id, label: label };
+    if (item.control === false) entry.control = false;
+    out.push(entry);
     if (out.length >= MAX_ENTITIES) break;
   }
   return { entities: out, showHints: !(j && j.showHints === false) };
@@ -69,11 +100,13 @@ function saveConfig(list, opts) {
     var raw = list[i];
     var id = '';
     var label = '';
+    var control = true;
     if (typeof raw === 'string') {
       id = raw.trim();
     } else if (raw && typeof raw === 'object') {
       id = String(raw.id || '').trim();
       label = typeof raw.label === 'string' ? raw.label.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL) : '';
+      control = raw.control !== false;
     } else {
       continue;
     }
@@ -86,7 +119,10 @@ function saveConfig(list, opts) {
       return { ok: false, error: msg('srv.habar.tooMany', 'too many entities (max {max})', { max: MAX_ENTITIES }) };
     }
     seen[id] = true;
-    out.push({ id: id, label: label });
+    // Kept only where control is withheld, so a list saved before stays as it was.
+    var entry = { id: id, label: label };
+    if (!control) entry.control = false;
+    out.push(entry);
   }
   try {
     if (!out.length) {
@@ -166,7 +202,8 @@ function init(opts) {
   if (typeof opts.byKey === 'function') byKeyFn = opts.byKey;
   if (typeof opts.hour12 === 'function') hour12Fn = opts.hour12;
   if (opts.Subscription) Subscription = opts.Subscription;
-  if (opts.delaysMs) afterCloseMs = afterStartMs = afterSwitchOnMs = opts.delaysMs;
+  if (opts.delaysMs) afterCloseMs = afterStartMs = afterSwitchOnMs = confirmRetryMs = opts.delaysMs;
+  if (opts.pageFile) { pageFile = opts.pageFile; pageHash = null; }
 }
 
 function lightSupportsBrightness(attrs) {
@@ -190,7 +227,22 @@ function formatTemp(n, unit) {
   return s + (unit || '°');
 }
 
+/*
+ * An entity whose control is switched off on the dashboard (control: false)
+ * shows here as a reading: OK and the steps do nothing and act() refuses it,
+ * so a child's TV can show the heating or a light without changing them.
+ */
 function formatTile(item, ent, err) {
+  var tile = tileFor(item, ent, err);
+  if (item && item.control === false) {
+    tile.readOnly = true;
+    tile.adjustable = false;
+    tile.viewOnly = true;
+  }
+  return tile;
+}
+
+function tileFor(item, ent, err) {
   var id = item.id;
   var domain = domainOf(id);
   var attrs = (ent && ent.attributes && typeof ent.attributes === 'object') ? ent.attributes : {};
@@ -205,7 +257,7 @@ function formatTile(item, ent, err) {
     error: err || '',
     active: false,
     adjustable: false,
-    valueText: err ? 'Unavailable' : (rawState || 'Unknown'),
+    valueText: err ? msg('srv.habar.unavailable', 'Unavailable') : (rawState || msg('srv.habar.unknown', 'Unknown')),
     subText: err ? err : '',
     pct: null,
     currentTemp: null,
@@ -230,13 +282,13 @@ function formatTile(item, ent, err) {
     tile.pct = typeof attrs.brightness === 'number'
       ? Math.max(0, Math.min(100, Math.round(attrs.brightness * 100 / 255)))
       : (tile.active ? 100 : 0);
-    tile.valueText = tile.active ? (hasBri ? tile.pct + '%' : 'On') : 'Off';
+    tile.valueText = tile.active ? (hasBri ? tile.pct + '%' : msg('srv.habar.on', 'On')) : msg('srv.habar.off', 'Off');
     return tile;
   }
 
   if (domain === 'switch' || domain === 'input_boolean') {
     tile.active = rawState === 'on';
-    tile.valueText = tile.active ? 'On' : 'Off';
+    tile.valueText = tile.active ? msg('srv.habar.on', 'On') : msg('srv.habar.off', 'Off');
     return tile;
   }
 
@@ -244,7 +296,7 @@ function formatTile(item, ent, err) {
     tile.active = rawState === 'on';
     tile.adjustable = typeof attrs.percentage === 'number' || (typeof attrs.percentage_step === 'number' && attrs.percentage_step > 0);
     tile.pct = typeof attrs.percentage === 'number' ? Math.max(0, Math.min(100, Math.round(attrs.percentage))) : (tile.active ? 100 : 0);
-    tile.valueText = tile.active ? (typeof attrs.percentage === 'number' ? tile.pct + '%' : 'On') : 'Off';
+    tile.valueText = tile.active ? (typeof attrs.percentage === 'number' ? tile.pct + '%' : msg('srv.habar.on', 'On')) : msg('srv.habar.off', 'Off');
     return tile;
   }
 
@@ -259,7 +311,7 @@ function formatTile(item, ent, err) {
     if (tempText && rawState) tile.valueText = tempText + ' · ' + rawState;
     else tile.valueText = tempText || rawState;
     if (tile.targetTemp !== null && tile.currentTemp !== null) {
-      tile.subText = 'Now ' + formatTemp(tile.currentTemp, tile.tempUnit);
+      tile.subText = msg('srv.habar.now', 'Now {temp}', { temp: formatTemp(tile.currentTemp, tile.tempUnit) });
     }
     return tile;
   }
@@ -274,17 +326,17 @@ function formatTile(item, ent, err) {
 
   if (domain === 'lock') {
     tile.active = rawState === 'locked';
-    tile.valueText = rawState === 'locked' ? 'Locked' : rawState === 'unlocked' ? 'Unlocked' : rawState;
+    tile.valueText = rawState === 'locked' ? msg('srv.habar.locked', 'Locked') : rawState === 'unlocked' ? msg('srv.habar.unlocked', 'Unlocked') : rawState;
     return tile;
   }
 
   if (domain === 'scene') {
-    tile.valueText = 'Activate';
+    tile.valueText = msg('srv.habar.activate', 'Activate');
     return tile;
   }
 
   if (domain === 'script' || domain === 'button' || domain === 'input_button') {
-    tile.valueText = 'Run';
+    tile.valueText = msg('srv.habar.run', 'Run');
     return tile;
   }
 
@@ -298,13 +350,54 @@ function formatTile(item, ent, err) {
   return tile;
 }
 
+/*
+ * Whether lib/haentity answers from a cache Home Assistant's push keeps
+ * current: while its socket is up. Then an ask costs Home Assistant nothing,
+ * so the open bar and Glasshouse Home's row ask every second and a change
+ * made elsewhere shows within about that. Otherwise (the socket down, or
+ * updateMode "polling") every ask is a request per tile to Home Assistant,
+ * and they keep to their own pace.
+ */
+function cached() {
+  var st = haEntityFn && typeof haEntityFn.status === 'function' ? haEntityFn.status() : null;
+  return !!(st && st.updateMode === 'websocket' && st.wsConnected === true);
+}
+
+function refreshMs() {
+  return cached() ? CACHED_REFRESH_MS : REFRESH_MS;
+}
+
+/*
+ * The Home Assistant bar's own words in a locale's language, for
+ * assets/habar.html, which loads no translation file of its own.
+ */
+function barText(locale) {
+  return {
+    'habar.hint.run': say.textForLocale('habar.hint.run', 'OK run', locale),
+    'habar.hint.toggle': say.textForLocale('habar.hint.toggle', 'OK toggle', locale),
+    'habar.hint.temp': say.textForLocale('habar.hint.temp', 'Up/Down temp', locale),
+    'habar.hint.adjust': say.textForLocale('habar.hint.adjust', 'Up/Down adjust', locale),
+    'habar.hint.close': say.textForLocale('habar.hint.close', 'Back close', locale),
+    'home.ha.increase': say.textForLocale('home.ha.increase', 'Increase', locale),
+    'home.ha.decrease': say.textForLocale('home.ha.decrease', 'Decrease', locale),
+    'habar.unavailable': say.textForLocale('habar.unavailable', 'Home Assistant unavailable', locale),
+    'habar.unavailableHint': say.textForLocale('habar.unavailableHint', 'Check the Glasshouse dashboard', locale),
+    'srv.habar.notConfigured': say.textForLocale('srv.habar.notConfigured', 'Home Assistant is not configured', locale),
+    'habar.setUp': say.textForLocale('habar.setUp', 'Set it up on the HA & MQTT tab', locale),
+    'habar.empty': say.textForLocale('habar.empty', 'No entities on bar yet', locale),
+    'habar.emptyHint': say.textForLocale('habar.emptyHint', 'Add entities on the HA & MQTT tab', locale),
+    'home.ha.activated': say.textForLocale('home.ha.activated', 'Activated', locale),
+    'home.ha.ran': say.textForLocale('home.ha.ran', 'Ran', locale)
+  };
+}
+
 function state(cb) {
   cb = cb || function () {};
   var cfg = listConfig();
   var list = cfg.entities;
   var configured = !!(haEntityFn && haEntityFn.configured());
   if (!configured || !list.length) {
-    return cb({ ok: true, configured: configured, hour12: !!hour12Fn(), showHints: cfg.showHints, tiles: [] });
+    return cb({ ok: true, configured: configured, hour12: !!hour12Fn(), showHints: cfg.showHints, refreshMs: REFRESH_MS, page: pageVersion(), tiles: [] });
   }
   var ids = list.map(function (it) { return it.id; });
   haEntityFn.readMany(ids, function (r) {
@@ -313,7 +406,7 @@ function state(cb) {
     var tiles = list.map(function (it) {
       return formatTile(it, ents[it.id] || null, errs[it.id] || '');
     });
-    cb({ ok: true, configured: true, hour12: !!hour12Fn(), showHints: cfg.showHints, tiles: tiles });
+    cb({ ok: true, configured: true, hour12: !!hour12Fn(), showHints: cfg.showHints, cached: cached(), refreshMs: refreshMs(), page: pageVersion(), tiles: tiles });
   });
 }
 
@@ -325,17 +418,28 @@ function findConfigured(entityId) {
   return null;
 }
 
-function finishAction(item, r, cb) {
+function finishAction(item, r, prevState, cb) {
   if (!r || !r.ok) {
     return cb({ ok: false, error: (r && r.error) || msg('srv.habar.serviceFailed', 'Home Assistant service call failed') });
   }
-  haEntityFn.read(item.id, function (cur) {
-    cb({ ok: true, tile: formatTile(item, cur.ok ? cur : null, cur.ok ? '' : (cur.error || '')) });
-  });
+  var left = (typeof prevState === 'string' && prevState) ? CONFIRM_RETRIES : 0;
+  (function attempt() {
+    haEntityFn.read(item.id, function (cur) {
+      if (cur.ok && cur.state === prevState && left > 0) {
+        left--;
+        var t = setTimeout(attempt, confirmRetryMs);
+        if (t.unref) t.unref();
+        return;
+      }
+      cb({ ok: true, tile: formatTile(item, cur.ok ? cur : null, cur.ok ? '' : (cur.error || '')) });
+    });
+  })();
 }
 
-function act(entityId, action, value, cb) {
+function act(entityId, action, value, prevState, cb) {
+  if (typeof prevState === 'function') { cb = prevState; prevState = ''; }
   cb = cb || function () {};
+  prevState = typeof prevState === 'string' ? prevState : '';
   if (!haEntityFn || !haEntityFn.configured()) {
     return cb({ ok: false, error: msg('srv.habar.notConfigured', 'Home Assistant is not configured') });
   }
@@ -343,18 +447,23 @@ function act(entityId, action, value, cb) {
   if (!item) {
     return cb({ ok: false, error: msg('srv.habar.notListed', 'entity is not on the Home Assistant bar') });
   }
+  // Checked here, where every change made from the TV passes: the bar, Glasshouse
+  // Home's row, and a remote key stepping its tile.
+  if (item.control === false) {
+    return cb({ ok: false, error: msg('srv.habar.viewOnly', 'this entity can only be viewed on this TV') });
+  }
   var domain = domainOf(item.id);
   var mode = String(action || 'toggle');
 
   if (mode === 'toggle') {
     if (domain === 'light' || domain === 'switch' || domain === 'input_boolean' || domain === 'fan') {
-      return haEntityFn.callService(domain, 'toggle', { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+      return haEntityFn.callService(domain, 'toggle', { entity_id: item.id }, function (r) { finishAction(item, r, prevState, cb); });
     }
     if (domain === 'scene' || domain === 'script') {
-      return haEntityFn.callService(domain, 'turn_on', { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+      return haEntityFn.callService(domain, 'turn_on', { entity_id: item.id }, function (r) { finishAction(item, r, '', cb); });
     }
     if (domain === 'button' || domain === 'input_button') {
-      return haEntityFn.callService(domain, 'press', { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+      return haEntityFn.callService(domain, 'press', { entity_id: item.id }, function (r) { finishAction(item, r, '', cb); });
     }
     if (domain === 'lock' || domain === 'cover' || domain === 'climate') {
       return haEntityFn.read(item.id, function (cur) {
@@ -364,11 +473,11 @@ function act(entityId, action, value, cb) {
         var attrs = cur.attributes || {};
         if (domain === 'lock') {
           var svc = cur.state === 'locked' ? 'unlock' : 'lock';
-          return haEntityFn.callService('lock', svc, { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+          return haEntityFn.callService('lock', svc, { entity_id: item.id }, function (r) { finishAction(item, r, cur.state, cb); });
         }
         if (domain === 'cover') {
           var cSvc = (cur.state === 'open' || cur.state === 'opening') ? 'close_cover' : 'open_cover';
-          return haEntityFn.callService('cover', cSvc, { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+          return haEntityFn.callService('cover', cSvc, { entity_id: item.id }, function (r) { finishAction(item, r, cur.state, cb); });
         }
         if (cur.state === 'off') {
           var modes = Array.isArray(attrs.hvac_modes) ? attrs.hvac_modes : [];
@@ -376,9 +485,9 @@ function act(entityId, action, value, cb) {
           for (var i = 0; i < modes.length; i++) {
             if (modes[i] && modes[i] !== 'off') { pick = modes[i]; break; }
           }
-          return haEntityFn.callService('climate', 'set_hvac_mode', { entity_id: item.id, hvac_mode: pick }, function (r) { finishAction(item, r, cb); });
+          return haEntityFn.callService('climate', 'set_hvac_mode', { entity_id: item.id, hvac_mode: pick }, function (r) { finishAction(item, r, cur.state, cb); });
         }
-        return haEntityFn.callService('climate', 'turn_off', { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+        return haEntityFn.callService('climate', 'turn_off', { entity_id: item.id }, function (r) { finishAction(item, r, cur.state, cb); });
       });
     }
     return cb({ ok: false, error: msg('srv.habar.readOnly', '{domain} is read-only', { domain: domain }) });
@@ -388,7 +497,7 @@ function act(entityId, action, value, cb) {
     var delta = Number(value) < 0 ? -1 : 1;
     if (domain === 'cover') {
       return haEntityFn.callService('cover', delta > 0 ? 'open_cover' : 'close_cover', { entity_id: item.id }, function (r) {
-        finishAction(item, r, cb);
+        finishAction(item, r, prevState, cb);
       });
     }
     if (domain === 'light' || domain === 'climate' || domain === 'fan') {
@@ -403,9 +512,9 @@ function act(entityId, action, value, cb) {
             : 0;
           var nextPct = Math.max(0, Math.min(100, Math.round(curPct / 10) * 10 + delta * 10));
           if (nextPct <= 0) {
-            return haEntityFn.callService('light', 'turn_off', { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+            return haEntityFn.callService('light', 'turn_off', { entity_id: item.id }, function (r) { finishAction(item, r, cur.state, cb); });
           }
-          return haEntityFn.callService('light', 'turn_on', { entity_id: item.id, brightness_pct: nextPct }, function (r) { finishAction(item, r, cb); });
+          return haEntityFn.callService('light', 'turn_on', { entity_id: item.id, brightness_pct: nextPct }, function (r) { finishAction(item, r, '', cb); });
         }
         if (domain === 'fan') {
           var fanPct = cur.state === 'on'
@@ -413,9 +522,9 @@ function act(entityId, action, value, cb) {
             : 0;
           var nextFan = Math.max(0, Math.min(100, fanPct + delta * 25));
           if (nextFan <= 0) {
-            return haEntityFn.callService('fan', 'turn_off', { entity_id: item.id }, function (r) { finishAction(item, r, cb); });
+            return haEntityFn.callService('fan', 'turn_off', { entity_id: item.id }, function (r) { finishAction(item, r, cur.state, cb); });
           }
-          return haEntityFn.callService('fan', 'set_percentage', { entity_id: item.id, percentage: nextFan }, function (r) { finishAction(item, r, cb); });
+          return haEntityFn.callService('fan', 'set_percentage', { entity_id: item.id, percentage: nextFan }, function (r) { finishAction(item, r, '', cb); });
         }
         var step = typeof attrs.target_temp_step === 'number' && attrs.target_temp_step > 0 ? attrs.target_temp_step : 0.5;
         var minT = typeof attrs.min_temp === 'number' ? attrs.min_temp : 15;
@@ -425,7 +534,7 @@ function act(entityId, action, value, cb) {
           : (typeof attrs.current_temperature === 'number' ? attrs.current_temperature : 20);
         var nextTemp = Math.round(Math.max(minT, Math.min(maxT, base + delta * step)) * 10) / 10;
         return haEntityFn.callService('climate', 'set_temperature', { entity_id: item.id, temperature: nextTemp }, function (r) {
-          finishAction(item, r, cb);
+          finishAction(item, r, '', cb);
         });
       });
     }
@@ -453,9 +562,8 @@ function open(cb) {
 
 function start() {
   if (sub || !lunaFn || !wanted()) return;
-  sub = new Subscription('com.webos.applicationManager/running', { subscribe: true }, null, {});
-  sub.handlers.message = runningChanged;
-  sub.start();
+  // One subscription shared with the other bars (lib/running.js).
+  sub = runningApps.watch(runningChanged, Subscription);
   schedule(afterStartMs);
 }
 
@@ -481,6 +589,7 @@ function sync() {
 }
 
 module.exports = {
+  barText: barText,
   formatTile: formatTile,
   init: init,
   start: start,
@@ -495,5 +604,6 @@ module.exports = {
   act: act,
   open: open,
   runningChanged: runningChanged,
+  pageVersion: pageVersion,
   APP: APP
 };

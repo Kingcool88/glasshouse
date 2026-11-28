@@ -8,6 +8,7 @@ var zlib = require('zlib');
 var crypto = require('crypto');
 var http = require('http');
 var say = require('./say');
+var lutSlots = require('./lutslots');
 var localAddress4 = require('./util').localAddress4;
 var localAddress6 = require('./util').localAddress6;
 var listenDualStack = require('./util').listenDualStack;
@@ -117,6 +118,8 @@ var haEntityModule = null;
 var haBarModule = null;
 /** @type {typeof import('./inputbar')} */
 var inputBarModule = null;
+/** @type {typeof import('./inputbanner')} */
+var inputBannerModule = null;
 /** @type {typeof import('./ask')} */
 var askModule = null;
 /** @type {typeof import('./updater')} */
@@ -141,6 +144,8 @@ var ntpModule = null;
 var historyModule = null;
 var perfHistoryModule = null;
 var barPressModule = null;
+// The palmbus switch's state and report links (palmbusInfo in tvweb.js).
+var palmbusInfoFn = null;
 var storageScanModule = null;
 /** @type {typeof import('./sysinfo')} */
 var sysinfoModule = null;
@@ -710,7 +715,7 @@ function handoffRequest(req, res) {
 
 function startHandoff(cb) {
   if (HANDOFF.server) return cb(null, handoffUrl());
-  if (!localAddress4()) return cb(new Error('this TV has no network address'));
+  if (!localAddress4()) return cb(new Error(msg('srv.setup.noAddress', 'this TV has no network address')));
   var code = crypto.randomBytes(8).toString('hex');
   var srv = http.createServer(handoffRequest);
   // IPv4-only if the dashboard is; dual-stack otherwise, even when the
@@ -938,6 +943,7 @@ function updateSummary() {
   s.allowNetworkDebugger = !!(config && config.allowNetworkDebugger);
   s.allowTileHiding = !!(appsModule && appsModule.tileHidingAllowed && appsModule.tileHidingAllowed());
   s.allowExperimentalScreensavers = !!(screensaversModule && screensaversModule.allowedAnyway && screensaversModule.allowedAnyway());
+  s.palmbus = palmbusInfoFn ? palmbusInfoFn() : null;
   s.pointer = {
     supported: !!(pointerModule && pointerModule.isSupported()),
     enabled: !!(pointerModule && pointerModule.isEnabled()),
@@ -1810,6 +1816,20 @@ function acceptsGzip(acceptEncoding) {
   return wildcardAccepted;
 }
 
+/*
+ * The Home Assistant bar (assets/habar.html, bar=1) loads no translation file,
+ * so its answers come in the TV's menu language, as i18n.js would have picked
+ * from the TV's browser. Glasshouse Home asks the same routes in its own
+ * language. Returns the TV's locale for the bar, or null for anything else.
+ */
+function barAsks(u, res) {
+  if (!u.query || u.query.bar !== '1') return null;
+  var locale = clockModule && clockModule.qtLocale ? String(clockModule.qtLocale() || '') : '';
+  var r = /** @type {any} */ (res);
+  if (!r.glasshouseLang) r.glasshouseLang = say.langOfLocale(locale);
+  return locale;
+}
+
 function handleRequest(req, res) {
   var u = parseUrl(req.url);
   var pathname = u.pathname;
@@ -2056,7 +2076,8 @@ function handleRequest(req, res) {
       ok: true,
       writable: !!config.allowControl,
       noSignal: nosignal.status(),
-      inputBar: inputBarModule ? inputBarModule.summary() : null
+      inputBar: inputBarModule ? inputBarModule.summary() : null,
+      inputBanner: inputBannerModule ? inputBannerModule.summary() : null
     }));
   }
 
@@ -2384,9 +2405,16 @@ function handleRequest(req, res) {
 
   if (pathname === '/api/ha/bar/state' && req.method === 'GET' && haBarModule) {
     if (!fromTV(req) && !authed(u.query, req)) return send(res, 401, JSON.stringify({ ok: false, error: 'unauthorized' }));
+    var barLocale = barAsks(u, res);
     return haBarModule.state(function (r) {
+      if (r && barLocale !== null) r.text = haBarModule.barText(barLocale);
       send(res, 200, JSON.stringify(r || { ok: false, error: 'failed' }));
     });
+  }
+  // The bar's page asks this while out of sight, without Home Assistant being asked.
+  if (pathname === '/api/ha/bar/page' && req.method === 'GET' && haBarModule) {
+    if (!fromTV(req) && !authed(u.query, req)) return send(res, 401, JSON.stringify({ ok: false, error: 'unauthorized' }));
+    return send(res, 200, JSON.stringify({ ok: true, page: haBarModule.pageVersion() }));
   }
 
   // Glasshouse Home: a Home Assistant tile that steps is in focus, so Channel
@@ -2419,6 +2447,15 @@ function handleRequest(req, res) {
     barPressModule.closed(String(u.query.app || ''), Number(u.query.press));
     return send(res, 200, JSON.stringify({ ok: true }));
   }
+  // The key filter's Brightness keys: a step made here, as the compositor's own call cannot read the level on webOS 4 (#1815). The TV only.
+  if (pathname === '/api/remotekeys/brightness' && req.method === 'POST' && remoteKeysModule) {
+    if (!fromTV(req)) return send(res, 403, JSON.stringify({ ok: false, error: 'from the TV only' }));
+    return readJsonBody(req, res, function (body) {
+      remoteKeysModule.brightnessFromFilter(body && body.delta, body && body.from, function (r) {
+        send(res, r && r.ok ? 200 : 502, JSON.stringify(r || { ok: false }));
+      });
+    });
+  }
   // The key filter's Ambient light key: PicCap toggled here, as the dashboard does. The TV only.
   if (pathname === '/api/remotekeys/piccap' && req.method === 'POST' && remoteKeysModule) {
     if (!fromTV(req)) return send(res, 403, JSON.stringify({ ok: false, error: 'from the TV only' }));
@@ -2429,8 +2466,9 @@ function handleRequest(req, res) {
     if (!fromTV(req) && !config.allowControl) {
       return send(res, 403, JSON.stringify({ ok: false, error: msg('srv.controlsOff', 'controls disabled in config') }));
     }
+    barAsks(u, res);
     return readJsonBody(req, res, function (body) {
-      haBarModule.act(body && body.id, body && body.action, body && body.value, function (r) {
+      haBarModule.act(body && body.id, body && body.action, body && body.value, body && body.prevState, function (r) {
         send(res, r && r.ok ? 200 : 502, JSON.stringify(r || { ok: false, error: 'failed' }));
       });
     });
@@ -2569,6 +2607,13 @@ function handleRequest(req, res) {
     return tvApp('status', function (r) {
       if (r && r.ok) r.writable = config.allowControl;
       send(res, 200, JSON.stringify(r));
+    });
+  }
+
+  // Stored picture-calibration files (size and checksum only), where the TV has them.
+  if (pathname === '/api/lutslots') {
+    return lutSlots.readSlots(function (r) {
+      send(res, 200, JSON.stringify({ ok: true, available: !!r.available, slots: r.slots || [] }));
     });
   }
 
@@ -3336,6 +3381,7 @@ function init(opts) {
   if (opts.haEntity) haEntityModule = opts.haEntity;
   if (opts.haBar) haBarModule = opts.haBar;
   if (opts.inputBar) inputBarModule = opts.inputBar;
+  if (opts.inputBanner) inputBannerModule = opts.inputBanner;
   if (opts.ask) askModule = opts.ask;
   if (opts.updater) updaterModule = opts.updater;
   if (opts.logs) logsModule = opts.logs;
@@ -3353,6 +3399,7 @@ function init(opts) {
   if (opts.history) historyModule = opts.history;
   if (opts.perfHistory) perfHistoryModule = opts.perfHistory;
   if (opts.barPress) barPressModule = opts.barPress;
+  if (typeof opts.palmbus === 'function') palmbusInfoFn = opts.palmbus;
   if (opts.storageScan) storageScanModule = opts.storageScan;
   if (opts.sysinfo) sysinfoModule = opts.sysinfo;
   if (opts.screenColour) screenColourModule = opts.screenColour;

@@ -404,7 +404,8 @@ var PARTS = [
     valid: function (v) {
       return Array.isArray(v) && v.length <= 16 && v.every(function (item) {
         return isObject(item) && typeof item.id === 'string' && /^[a-z0-9_]+\.[a-z0-9_]+$/.test(item.id) &&
-          (item.label === undefined || (typeof item.label === 'string' && item.label.length <= 40));
+          (item.label === undefined || (typeof item.label === 'string' && item.label.length <= 40)) &&
+          (item.control === undefined || typeof item.control === 'boolean');
       });
     },
     read: function (cb) { cb(haBar ? haBar.listConfig().entities : []); },
@@ -446,13 +447,13 @@ var NOT_CARRIED = {
   tileHiding: 'choose',
   // Screen saver entity slots and colors can be chosen per TV.
   screensaverEntities: 'choose', screensaverColor: 'choose',
-  setTileHidingAllowed: 'experimental', setWebos10ScreensaversAllowed: 'experimental', setInputBarAllowed: 'experimental', setPointerEnabled: 'experimental', setPointerSettings: 'experimental',
+  setTileHidingAllowed: 'experimental', setWebos10ScreensaversAllowed: 'experimental', setInputBarAllowed: 'experimental', setPointerEnabled: 'experimental', setLunaViaPalmbus: 'experimental', setPointerSettings: 'experimental',
   setNetworkDebuggerAllowed: 'access', setDashboardPort: 'access',
   setDeviceName: 'tvName',
   // config.json's, in backup.js's GLASSHOUSE.
   // The adBlock part's control under its other names.
   adblock: 'carried', toggleAdBlock: 'carried',
-  updateAutoCheck: 'carried', updateAskOnTv: 'carried', setPrometheusEnabled: 'carried', setNtpServer: 'carried', setNtpEnabled: 'carried',
+  updateAutoCheck: 'carried', updateAskOnTv: 'carried', closeInputBanner: 'carried', setPrometheusEnabled: 'carried', setNtpServer: 'carried', setNtpEnabled: 'carried',
   setHistoryEnabled: 'carried', setBackupDaily: 'carried', setScreenGlowAllowed: 'carried',
   // One of lgsettings.js's rows: carried by its section.
   lgSetting: 'carried'

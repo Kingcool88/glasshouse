@@ -665,6 +665,9 @@
  "ha.api": {"from": "Home Assistant API", "text": "Home Assistant -rajapinta"},
  "ha.api.desc": {"from": "Reads live Home Assistant entities for the Home Assistant screen savers (Ambient and Data Display) on the Screensaver tab, values at a glance beside Glasshouse Home's clock, and the Home Assistant control bar. Connects straight to Home Assistant over HTTP/HTTPS without using MQTT, and saves without restarting.", "text": "Lukee Home Assistantin entiteettejä reaaliajassa Näytönsäästäjä-välilehden Home Assistant -näytönsäästäjille (Ambient ja Data Display), Glasshouse Homen kellon viereen näytettäviin arvoihin ja Home Assistant -ohjauspalkille. Yhdistää suoraan Home Assistantiin HTTP:n tai HTTPS:n kautta ilman MQTT:tä, ja tallentuu ilman uudelleenkäynnistystä."},
  "ha.bar.addOne": {"from": "Add an entity", "text": "Lisää entiteetti"},
+ "ha.bar.controlHint": {"from": "Control: clear it for an entity the TV should only show, without changing it.", "text": "Ohjaus: poista valinta entiteetiltä, jonka TV:n pitää vain näyttää muuttamatta sitä."},
+ "ha.bar.readOnly": {"from": "Read only", "text": "Vain luku"},
+ "ha.bar.control": {"from": "Control", "text": "Ohjaus"},
  "ha.bar.badEntity": {"from": "Enter an entity ID such as light.living_room.", "text": "Anna entiteetin tunnus, kuten light.olohuone."},
  "ha.bar.countOf": {"from": "{n} of {max}", "text": "{n}/{max}"},
  "ha.bar.duplicate": {"from": "Already on the bar.", "text": "On jo palkissa."},
@@ -2679,6 +2682,7 @@
  "srv.habar.openFailed": {"from": "Could not open the Home Assistant bar.", "text": "Home Assistant -palkkia ei voitu avata."},
  "srv.habar.readFailed": {"from": "could not read entity", "text": "entiteettiä ei voitu lukea"},
  "srv.habar.readOnly": {"from": "{domain} is read-only", "text": "{domain} on vain luku -tilassa"},
+ "srv.habar.viewOnly": {"from": "this entity can only be viewed on this TV", "text": "tätä entiteettiä voi tällä TV:llä vain katsoa"},
  "srv.habar.serviceFailed": {"from": "Home Assistant service call failed", "text": "Home Assistantin palvelukutsu epäonnistui"},
  "srv.habar.tooMany": {"from": "too many entities (max {max})", "text": "liian monta entiteettiä (enintään {max})"},
  "srv.home.apps": {"from": "App tiles", "text": "Sovellusruudut"},
@@ -4088,5 +4092,8 @@
  "srv.updateAsk.unpacking": {"from": "Installing the files", "text": "Asennetaan tiedostoja"},
  "srv.updateAsk.restarting": {"from": "Restarting Glasshouse", "text": "Glasshouse käynnistyy uudelleen"},
  "srv.updateAsk.done": {"from": "Glasshouse {version} is installed", "text": "Glasshouse {version} on asennettu"},
- "srv.updateAsk.current": {"from": "Glasshouse is already up to date", "text": "Glasshouse on jo ajan tasalla"}
+ "srv.updateAsk.current": {"from": "Glasshouse is already up to date", "text": "Glasshouse on jo ajan tasalla"},
+ "inputs.banner": {"from": "Input banner", "text": "Tulobanneri"},
+ "inputs.banner.close": {"from": "Close the input banner at once", "text": "Sulje tulobanneri heti"},
+ "inputs.banner.closeDesc": {"from": "Switching to an HDMI input shows LG’s banner with its name for 5 seconds, and until it goes the remote does not reach the device. With this on, Glasshouse closes it 2 seconds in, so the remote works on the device straight away. Only for inputs with a device that the TV controls over HDMI-CEC (SIMPLINK).", "text": "Kun vaihdat HDMI-tuloon, LG näyttää bannerin sen nimellä 5 sekunnin ajan, eikä kaukosäädin ohjaa laitetta ennen kuin se katoaa. Kun tämä on päällä, Glasshouse sulkee sen 2 sekunnin kohdalla, jolloin kaukosäädin ohjaa laitetta heti. Vain tuloille, joissa on laite, jota televisio ohjaa HDMI-CEC:n (SIMPLINK) kautta."}
 }
