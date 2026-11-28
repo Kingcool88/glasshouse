@@ -10,10 +10,10 @@ The **Remotes** column lists entries in the [remote catalogue](remotes.md) known
 
 | Remote tab key | webOS 4–10 | webOS 11 | Home Assistant | Remotes |
 | :------------- | :--------- | :------- | :------------- | :------ |
-| Netflix | yes | yes (where listed) | yes | MR25GA, MR23, MR22N, MR20, MR18 |
-| Prime Video | yes | yes (where listed) | yes | MR25GA, MR23, MR22N, MR20, MR18 |
-| Disney+ | yes | yes (where listed) | yes | MR25GA, MR23, MR22N |
-| LG Channels | yes | yes (where listed) | yes | MR25GA, MR23 |
+| Netflix | yes | yes (where listed) | yes | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
+| Prime Video | yes | yes (where listed) | yes | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
+| Disney+ | yes | yes (where listed) | yes | MR26GC, MR25GA, MR23, MR22N |
+| LG Channels | yes | yes (where listed) | yes | MR26GC, MR25GA, MR23 |
 | Rakuten TV | yes | yes (where listed) | yes | MR25GA, MR23, MR22N |
 | Movies | yes | yes (where listed) | yes | MR20 |
 | Hulu | yes | yes (where listed) | – | – |
@@ -26,17 +26,17 @@ The **Remotes** column lists entries in the [remote catalogue](remotes.md) known
 | Okko | – | yes (where listed) | – | – |
 | Kinopoisk | – | yes (where listed) | – | – |
 | LG Shop | – | yes (where listed) | – | – |
-| Stan | – | yes (where listed) | – | – |
-| YouTube | – | yes (where listed) | – | – |
+| Stan | – | yes (where listed) | – | MR26GC |
+| YouTube | – | yes (where listed) | – | MR26GC |
 | Alexa | yes | yes (blocks Alexa) | yes | MR25GA, MR23, MR22N |
 | Google Assistant | yes | yes (where listed) | yes | MR22N |
-| Microphone | yes | yes (where listed) | yes | MR25GA, MR23, MR22N, MR20, MR18 |
+| Microphone | yes | yes (where listed) | yes | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
 | Apps | yes | yes (where listed) | – | – |
-| Home Hub | yes (key table checked) | yes | – | MR25GA |
-| AI | – | yes (turns off voice) | – | MR25GA, MR23 |
-| ? button | yes | yes | – | MR25GA |
-| ? button, held | – | yes | – | MR25GA |
-| 123 button | yes (incl. webOS 4) | – | – | MR25GA, MR23, MR22N, MR20, MR18 |
+| Home Hub | yes (key table checked) | yes | – | MR26GC, MR25GA |
+| AI | – | yes (turns off voice) | – | MR26GC, MR25GA, MR23 |
+| ? button | yes | yes | – | MR26GC, MR25GA |
+| ? button, held | – | yes | – | MR26GC, MR25GA |
+| 123 button | yes (incl. webOS 4) | – | – | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
 | Text | yes (incl. webOS 4) | – | – | MR18 |
 | T.Opt | yes (incl. webOS 4) | – | – | MR18 |
 | Live Zoom | yes (incl. webOS 4) | – | – | MR18 |
@@ -51,9 +51,9 @@ The **Remotes** column lists entries in the [remote catalogue](remotes.md) known
 | 8 | yes | – | – | MR23, MR22N, MR20, MR18 |
 | 9 | yes | – | – | MR23, MR22N, MR20, MR18 |
 | 0 | yes | – | – | MR23, MR22N, MR20, MR18 |
-| Channel up | yes (incl. webOS 4) | yes (key handler patch, or observes presses) | yes | MR25GA, MR23, MR22N, MR20, MR18 |
-| Channel down | yes (incl. webOS 4) | yes (key handler patch, or observes presses) | yes | MR25GA, MR23, MR22N, MR20, MR18 |
-| Guide | yes | yes | – | MR25GA, MR23, MR22N, MR20, MR18 |
+| Channel up | yes (incl. webOS 4) | yes (key handler patch, or observes presses) | yes | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
+| Channel down | yes (incl. webOS 4) | yes (key handler patch, or observes presses) | yes | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
+| Guide | yes | yes | – | MR26GC, MR25GA, MR23, MR22N, MR20, MR18 |
 | Input | yes | yes (key handler patch) | – | MR23, MR22N, MR20, MR18 |
 | TV | yes | yes (where listed) | – | – |
 | Search | yes | yes (where listed) | – | – |
