@@ -15,6 +15,20 @@ var waitFor = require('./wait-for').waitFor;
 
 console.log('Running test-habar.js ...');
 
+// The Home Assistant bar loads no translation file: its words come from the
+// server in the TV's menu language, English where there is no translation.
+(function () {
+  var say = require('../server/lib/say');
+  say.init(path.join(__dirname, '..', 'server', 'assets', 'i18n'));
+  var en = haBar.barText('');
+  assert.strictEqual(Object.keys(en).length, 15);
+  assert.strictEqual(en['habar.hint.close'], 'Back close');
+  assert.strictEqual(haBar.barText('en-GB')['habar.empty'], 'No entities on bar yet');
+  var ru = haBar.barText('ru-RU');
+  assert.ok(ru['habar.hint.close'] && ru['habar.hint.close'] !== 'Back close', 'Russian: ' + ru['habar.hint.close']);
+  console.log('  \u2713 the bar\'s words come in the TV\'s menu language, English where there is none');
+})();
+
 var dir = path.join(os.tmpdir(), 'habar-' + process.pid);
 fs.mkdirSync(dir);
 

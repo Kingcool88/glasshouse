@@ -714,7 +714,7 @@ function handoffRequest(req, res) {
 
 function startHandoff(cb) {
   if (HANDOFF.server) return cb(null, handoffUrl());
-  if (!localAddress4()) return cb(new Error('this TV has no network address'));
+  if (!localAddress4()) return cb(new Error(msg('srv.setup.noAddress', 'this TV has no network address')));
   var code = crypto.randomBytes(8).toString('hex');
   var srv = http.createServer(handoffRequest);
   // IPv4-only if the dashboard is; dual-stack otherwise, even when the
@@ -1815,6 +1815,20 @@ function acceptsGzip(acceptEncoding) {
   return wildcardAccepted;
 }
 
+/*
+ * The Home Assistant bar (assets/habar.html, bar=1) loads no translation file,
+ * so its answers come in the TV's menu language, as i18n.js would have picked
+ * from the TV's browser. Glasshouse Home asks the same routes in its own
+ * language. Returns the TV's locale for the bar, or null for anything else.
+ */
+function barAsks(u, res) {
+  if (!u.query || u.query.bar !== '1') return null;
+  var locale = clockModule && clockModule.qtLocale ? String(clockModule.qtLocale() || '') : '';
+  var r = /** @type {any} */ (res);
+  if (!r.glasshouseLang) r.glasshouseLang = say.langOfLocale(locale);
+  return locale;
+}
+
 function handleRequest(req, res) {
   var u = parseUrl(req.url);
   var pathname = u.pathname;
@@ -2390,7 +2404,9 @@ function handleRequest(req, res) {
 
   if (pathname === '/api/ha/bar/state' && req.method === 'GET' && haBarModule) {
     if (!fromTV(req) && !authed(u.query, req)) return send(res, 401, JSON.stringify({ ok: false, error: 'unauthorized' }));
+    var barLocale = barAsks(u, res);
     return haBarModule.state(function (r) {
+      if (r && barLocale !== null) r.text = haBarModule.barText(barLocale);
       send(res, 200, JSON.stringify(r || { ok: false, error: 'failed' }));
     });
   }
@@ -2444,6 +2460,7 @@ function handleRequest(req, res) {
     if (!fromTV(req) && !config.allowControl) {
       return send(res, 403, JSON.stringify({ ok: false, error: msg('srv.controlsOff', 'controls disabled in config') }));
     }
+    barAsks(u, res);
     return readJsonBody(req, res, function (body) {
       haBarModule.act(body && body.id, body && body.action, body && body.value, body && body.prevState, function (r) {
         send(res, r && r.ok ? 200 : 502, JSON.stringify(r || { ok: false, error: 'failed' }));

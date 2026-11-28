@@ -19,7 +19,8 @@ var luna = require('./luna');
 var runningApps = require('./running');
 var barPress = require('./barpress');
 var util = require('./util');
-var msg = require('./say').msg;
+var say = require('./say');
+var msg = say.msg;
 
 var APP = 'com.tvweb.habar';
 var MAX_ENTITIES = 16;
@@ -216,7 +217,7 @@ function formatTile(item, ent, err) {
     error: err || '',
     active: false,
     adjustable: false,
-    valueText: err ? 'Unavailable' : (rawState || 'Unknown'),
+    valueText: err ? msg('srv.habar.unavailable', 'Unavailable') : (rawState || msg('srv.habar.unknown', 'Unknown')),
     subText: err ? err : '',
     pct: null,
     currentTemp: null,
@@ -241,13 +242,13 @@ function formatTile(item, ent, err) {
     tile.pct = typeof attrs.brightness === 'number'
       ? Math.max(0, Math.min(100, Math.round(attrs.brightness * 100 / 255)))
       : (tile.active ? 100 : 0);
-    tile.valueText = tile.active ? (hasBri ? tile.pct + '%' : 'On') : 'Off';
+    tile.valueText = tile.active ? (hasBri ? tile.pct + '%' : msg('srv.habar.on', 'On')) : msg('srv.habar.off', 'Off');
     return tile;
   }
 
   if (domain === 'switch' || domain === 'input_boolean') {
     tile.active = rawState === 'on';
-    tile.valueText = tile.active ? 'On' : 'Off';
+    tile.valueText = tile.active ? msg('srv.habar.on', 'On') : msg('srv.habar.off', 'Off');
     return tile;
   }
 
@@ -255,7 +256,7 @@ function formatTile(item, ent, err) {
     tile.active = rawState === 'on';
     tile.adjustable = typeof attrs.percentage === 'number' || (typeof attrs.percentage_step === 'number' && attrs.percentage_step > 0);
     tile.pct = typeof attrs.percentage === 'number' ? Math.max(0, Math.min(100, Math.round(attrs.percentage))) : (tile.active ? 100 : 0);
-    tile.valueText = tile.active ? (typeof attrs.percentage === 'number' ? tile.pct + '%' : 'On') : 'Off';
+    tile.valueText = tile.active ? (typeof attrs.percentage === 'number' ? tile.pct + '%' : msg('srv.habar.on', 'On')) : msg('srv.habar.off', 'Off');
     return tile;
   }
 
@@ -270,7 +271,7 @@ function formatTile(item, ent, err) {
     if (tempText && rawState) tile.valueText = tempText + ' · ' + rawState;
     else tile.valueText = tempText || rawState;
     if (tile.targetTemp !== null && tile.currentTemp !== null) {
-      tile.subText = 'Now ' + formatTemp(tile.currentTemp, tile.tempUnit);
+      tile.subText = msg('srv.habar.now', 'Now {temp}', { temp: formatTemp(tile.currentTemp, tile.tempUnit) });
     }
     return tile;
   }
@@ -285,17 +286,17 @@ function formatTile(item, ent, err) {
 
   if (domain === 'lock') {
     tile.active = rawState === 'locked';
-    tile.valueText = rawState === 'locked' ? 'Locked' : rawState === 'unlocked' ? 'Unlocked' : rawState;
+    tile.valueText = rawState === 'locked' ? msg('srv.habar.locked', 'Locked') : rawState === 'unlocked' ? msg('srv.habar.unlocked', 'Unlocked') : rawState;
     return tile;
   }
 
   if (domain === 'scene') {
-    tile.valueText = 'Activate';
+    tile.valueText = msg('srv.habar.activate', 'Activate');
     return tile;
   }
 
   if (domain === 'script' || domain === 'button' || domain === 'input_button') {
-    tile.valueText = 'Run';
+    tile.valueText = msg('srv.habar.run', 'Run');
     return tile;
   }
 
@@ -324,6 +325,30 @@ function cached() {
 
 function refreshMs() {
   return cached() ? CACHED_REFRESH_MS : REFRESH_MS;
+}
+
+/*
+ * The Home Assistant bar's own words in a locale's language, for
+ * assets/habar.html, which loads no translation file of its own.
+ */
+function barText(locale) {
+  return {
+    'habar.hint.run': say.textForLocale('habar.hint.run', 'OK run', locale),
+    'habar.hint.toggle': say.textForLocale('habar.hint.toggle', 'OK toggle', locale),
+    'habar.hint.temp': say.textForLocale('habar.hint.temp', 'Up/Down temp', locale),
+    'habar.hint.adjust': say.textForLocale('habar.hint.adjust', 'Up/Down adjust', locale),
+    'habar.hint.close': say.textForLocale('habar.hint.close', 'Back close', locale),
+    'home.ha.increase': say.textForLocale('home.ha.increase', 'Increase', locale),
+    'home.ha.decrease': say.textForLocale('home.ha.decrease', 'Decrease', locale),
+    'habar.unavailable': say.textForLocale('habar.unavailable', 'Home Assistant unavailable', locale),
+    'habar.unavailableHint': say.textForLocale('habar.unavailableHint', 'Check the Glasshouse dashboard', locale),
+    'srv.habar.notConfigured': say.textForLocale('srv.habar.notConfigured', 'Home Assistant is not configured', locale),
+    'habar.setUp': say.textForLocale('habar.setUp', 'Set it up on the HA & MQTT tab', locale),
+    'habar.empty': say.textForLocale('habar.empty', 'No entities on bar yet', locale),
+    'habar.emptyHint': say.textForLocale('habar.emptyHint', 'Add entities on the HA & MQTT tab', locale),
+    'home.ha.activated': say.textForLocale('home.ha.activated', 'Activated', locale),
+    'home.ha.ran': say.textForLocale('home.ha.ran', 'Ran', locale)
+  };
 }
 
 function state(cb) {
@@ -519,6 +544,7 @@ function sync() {
 }
 
 module.exports = {
+  barText: barText,
   formatTile: formatTile,
   init: init,
   start: start,
