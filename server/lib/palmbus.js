@@ -31,6 +31,17 @@ var tried = false;
 var why = '';
 // The calls waiting on the handle now, each with its finish(err, raw).
 var inFlight = [];
+/*
+ * On Node 0.10 and 0.12 (webOS 4 and older) a timed-out call keeps its handle.
+ * Unregistering one there, with other calls in flight on it and luna-send
+ * started in their place, aborts the process in libuv
+ * ("uv__io_stop: Assertion `loop->watchers[w->fd] == w' failed"): an
+ * OLED65B8SLC (webOS 4.4.3) did so on its first start after an update, as a
+ * slow LG service missed the wait, and a test that times a call out among
+ * others did so on every run, and never with the handle kept. Kept, a late
+ * answer is dropped, and the process used one CPU tick in 30 s afterwards.
+ */
+var keepOnTimeout = /^v0\./.test(process.version);
 
 function load() {
   if (handle) return handle;
@@ -56,7 +67,7 @@ function load() {
  * A call left unanswered keeps the binding busy: on the OLED42C24LA each one
  * cost 3% of a core for as long as the process ran, cancelled or not, until
  * its handle was unregistered. So a call that times out takes its handle with
- * it, and the next call opens a new one. The others still waiting on the old
+ * it (except on Node 0.x, keepOnTimeout above), and the next call opens a new one. The others still waiting on the old
  * handle would never hear back, so they end with a retry error, which
  * lib/luna.js makes again on the new handle.
  */
@@ -108,7 +119,7 @@ function call(uri, payload, waitMs, cb) {
     // The handle goes first, so a call made from this one's callback opens the new one.
     var at = inFlight.indexOf(finish);
     if (at !== -1) inFlight.splice(at, 1);
-    retire(h);
+    if (!keepOnTimeout) retire(h);
     finish(new Error('no answer in ' + waitMs + ' ms'));
   }, waitMs);
   c.addListener('response', function (m) {
@@ -119,6 +130,8 @@ function call(uri, payload, waitMs, cb) {
 }
 
 module.exports = {
+  // For test/test-palmbus.js, which runs both ways on every Node.
+  setKeepOnTimeout: function (keep) { keepOnTimeout = !!keep; },
   available: available,
   unavailableReason: unavailableReason,
   call: call
