@@ -66,6 +66,8 @@ Switching modes takes effect immediately when an idle input is already on screen
 
 Switching to an HDMI input shows LG's banner with the input and device name, such as "HDMI 1 / Formuler Z11 P", for 5 seconds (10 with audio guidance). Until it goes, the remote's keys stay with the TV and do not reach the device over HDMI-CEC (SIMPLINK); OK or Back closes it. With **Close the input banner at once** on, Glasshouse sends that Back itself 2 seconds after the input comes to the front, so the remote works on the device straight away. It does this only for an HDMI input with a player or set-top box on SIMPLINK, not one with nothing on it or only a sound bar, where Back would reach the TV instead. A Back that came after the banner had already been closed by hand would go to the device as one step back. Off by default; tried on a C6 running webOS 11.1.
 
+The switch shows only on TVs whose input app holds the remote's keys back while the banner is up, as webOS 9 and 11 do. On webOS 4 the banner doesn't hold them, so there is nothing to close and the switch doesn't appear.
+
 ## webOS versions
 
 **Glasshouse Input bar** is offered on webOS 4 to 10, and on webOS 11 for the TVs described above; [why not elsewhere](../tested-tvs.md#why-some-versions-are-not-offered). Where no one has yet reported it working on the TV's version, a note above the choice says so, with links to report a problem or that it works; see [Launchers and overlays by webOS version](../tested-tvs.md#launchers-and-overlays-by-webos-version).

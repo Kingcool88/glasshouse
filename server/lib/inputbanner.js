@@ -18,9 +18,22 @@
  * after the banner had gone would go to the device as one step back, which is
  * why it is sent once and never later.
  *
+ * Not every input app holds the keys back. An OLED42C24LA (webOS 9.2) has
+ * the same gate in InputEventLayer.qml; an OLED65B8SLC (webOS 4.4.3) has none,
+ * and there the Back would go to the device on every switch. So the switch is
+ * offered only where the input app has the gate.
+ *
  * Strict ES5: runs on node 0.12.
  */
+var fs = require('fs');
+var path = require('path');
 var msg = require('./say').msg;
+
+// LG's input app, and the check in it that keeps keys from SIMPLINK while a
+// focusable view such as the banner is up.
+var INPUT_APP_QML = '/usr/palm/applications/com.webos.app.inputcommon/qml';
+var GATE_FILE = 'InputEventLayer.qml';
+var GATE = /simplinkEnabled\s*&&\s*!\s*isFocusableViewExist/;
 
 // After the input comes to the front: its banner is up by then.
 var DELAY_MS = 2000;
@@ -34,6 +47,8 @@ var writeSettings = null;
 var delayMs = DELAY_MS;
 var front = '';
 var timer = null;
+var inputAppDir = INPUT_APP_QML;
+var gate = null;
 
 function init(opts) {
   opts = opts || {};
@@ -41,9 +56,35 @@ function init(opts) {
   if (opts.luna) lunaFn = opts.luna;
   if (opts.writeSettings) writeSettings = opts.writeSettings;
   delayMs = typeof opts.delayMs === 'number' ? opts.delayMs : DELAY_MS;
+  inputAppDir = opts.inputAppDir || INPUT_APP_QML;
+  gate = null;
   front = '';
   clearTimeout(timer);
   timer = null;
+}
+
+// Whether InputEventLayer.qml, wherever this TV's input app keeps it, has
+// the gate. Looked for once: the input app only changes with the firmware.
+function findGate(dir, depth) {
+  var names;
+  try { names = fs.readdirSync(dir); } catch (e) { return false; }
+  for (var i = 0; i < names.length; i++) {
+    var full = path.join(dir, names[i]);
+    if (names[i] === GATE_FILE) {
+      try { if (GATE.test(fs.readFileSync(full, 'utf8'))) return true; } catch (e) {}
+      continue;
+    }
+    if (depth >= 6 || /\.(qml|js|json|png)$/.test(names[i])) continue;
+    var st = null;
+    try { st = fs.statSync(full); } catch (e) {}
+    if (st && st.isDirectory() && findGate(full, depth + 1)) return true;
+  }
+  return false;
+}
+
+function supported() {
+  if (gate === null) gate = findGate(inputAppDir, 0);
+  return gate;
 }
 
 function enabled() {
@@ -92,7 +133,7 @@ function onAppChanged(appId, snapshot) {
   if (front === was) return;
   clearTimeout(timer);
   timer = null;
-  if (snapshot || !enabled() || !lunaFn || !HDMI_APP.test(front)) return;
+  if (snapshot || !enabled() || !lunaFn || !HDMI_APP.test(front) || !supported()) return;
   var opened = front;
   timer = setTimeout(function () {
     timer = null;
@@ -103,6 +144,9 @@ function onAppChanged(appId, snapshot) {
 
 function setEnabled(on, cb) {
   if (!writeSettings) return cb({ ok: false, error: 'no writeSettings handler configured' });
+  if (on && !supported()) {
+    return cb({ ok: false, error: msg('srv.inputs.bannerNotHeld', 'this TV\'s input banner does not hold the remote\'s keys back, so there is nothing to close') });
+  }
   writeSettings({ inputs: { closeBanner: on } }, function (err) {
     if (err) return cb({ ok: false, error: msg('srv.saveSettingFailed', 'could not save the setting: {error}', { error: err.message }) });
     config.inputs = config.inputs || {};
@@ -112,8 +156,9 @@ function setEnabled(on, cb) {
   });
 }
 
+// null where the input app has no gate: the Inputs tab then leaves the switch out.
 function summary() {
-  return { closeBanner: enabled() };
+  return supported() ? { closeBanner: enabled() } : null;
 }
 
 module.exports = {
@@ -121,6 +166,7 @@ module.exports = {
   BACK_KEYCODE: BACK_KEYCODE,
   init: init,
   enabled: enabled,
+  supported: supported,
   onAppChanged: onAppChanged,
   setEnabled: setEnabled,
   summary: summary

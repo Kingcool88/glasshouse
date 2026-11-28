@@ -5,7 +5,23 @@
  * away before it is due, the state at start, or with the switch off.
  */
 var assert = require('assert');
+var fs = require('fs');
+var os = require('os');
+var path = require('path');
 var inputBanner = require('../server/lib/inputbanner');
+
+// LG's input app as an OLED42C24LA (webOS 9.2) has it, with the gate that
+// holds keys back while the banner is up, and as an OLED65B8SLC (webOS 4.4.3)
+// has it, with none.
+var apps = path.join(os.tmpdir(), 'inputbanner-' + process.pid);
+var withGate = path.join(apps, 'gate', 'qml', 'UserInterfaceLayer', 'Containers');
+var noGate = path.join(apps, 'nogate', 'qml', 'Model');
+[withGate, noGate].forEach(function (d) { d.split(path.sep).reduce(function (at, part) { at = at + path.sep + part; try { fs.mkdirSync(at); } catch (e) {} return at; }); });
+fs.writeFileSync(path.join(withGate, 'InputEventLayer.qml'),
+  'if (event.isAutoRepeat || inputEventHandler.simplinkEnabled && !isFocusableViewExist) {\n');
+fs.writeFileSync(path.join(noGate, 'Simplink.qml'), 'id: simplinkModel\n');
+var GATE_DIR = path.join(apps, 'gate', 'qml');
+var NO_GATE_DIR = path.join(apps, 'nogate', 'qml');
 
 var sent, config, saved;
 var DEVICES = [
@@ -14,7 +30,7 @@ var DEVICES = [
   { id: 'HDMI_3', appId: 'com.webos.app.hdmi3', subList: [{ id: 'SIMPLINK', osdName: 'Sonos Beam', cecpDevType: 5 }] }
 ];
 
-function setup(on) {
+function setup(on, inputAppDir) {
   sent = [];
   saved = [];
   config = { inputs: { closeBanner: on } };
@@ -26,7 +42,8 @@ function setup(on) {
       cb({ returnValue: true });
     },
     writeSettings: function (patch, cb) { saved.push(patch); cb(null); },
-    delayMs: 2
+    delayMs: 2,
+    inputAppDir: inputAppDir || GATE_DIR
   });
 }
 
@@ -102,6 +119,32 @@ step(function (done) {
     assert.deepEqual(inputBanner.summary(), { closeBanner: true });
     done();
   });
+});
+
+// An input app with no gate (webOS 4): nothing sent, the switch left out, and
+// it cannot be switched on.
+step(function (done) {
+  setup(true, NO_GATE_DIR);
+  assert.strictEqual(inputBanner.supported(), false);
+  assert.strictEqual(inputBanner.summary(), null, 'the Inputs tab leaves the switch out');
+  inputBanner.onAppChanged('com.webos.app.hdmi1', false);
+  after(15, function () {
+    assert.deepEqual(sent, [], 'no Back where the banner does not hold the keys');
+    setup(false, NO_GATE_DIR);
+    inputBanner.setEnabled(true, function (r) {
+      assert.strictEqual(r.ok, false);
+      assert.deepEqual(saved, []);
+      setup(false, GATE_DIR);
+      assert.strictEqual(inputBanner.supported(), true);
+      console.log('  ✓ only offered, and only sent, where the input app holds keys back while the banner is up');
+      done();
+    });
+  });
+});
+
+step(function (done) {
+  fs.rmSync ? fs.rmSync(apps, { recursive: true, force: true }) : null;
+  done();
 });
 
 next();
