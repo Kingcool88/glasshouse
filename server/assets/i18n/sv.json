@@ -4086,5 +4086,6 @@
  "pic.mode.gallery": {"from": "Gallery", "text": "Galleri"},
  "srv.remoteKeys.glasshouseHome": {"from": "Glasshouse Home", "text": "Glasshouse Home"},
  "srv.remoteKeys.lgHome": {"from": "LG's Home", "text": "LG:s Home"},
- "srv.remoteKeys.dashboard": {"from": "Glasshouse dashboard", "text": "Glasshouse-dashboarden"}
+ "srv.remoteKeys.dashboard": {"from": "Glasshouse dashboard", "text": "Glasshouse-dashboarden"},
+ "srv.inputs.bannerNotHeld": {"from": "this TV's input banner does not hold the remote's keys back, so there is nothing to close", "text": "den här TV:ns ingångsbanner håller inte kvar fjärrens knapptryck, så det finns inget att stänga"}
 }
